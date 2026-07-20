@@ -3,5 +3,16 @@
 
 int main(void) {
 
-	printf("Hello World\n");
+	InitWindow(800, 450, "text editor");
+
+	SetTargetFPS(60);
+
+	while (!WindowShouldClose()) {
+		
+		BeginDrawing();
+
+		ClearBackground(BLACK);
+
+		EndDrawing();
+	}
 }
