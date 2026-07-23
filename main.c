@@ -33,6 +33,20 @@ void render_text(SDL_Renderer *renderer, TTF_Font *font, const char *text, Vec2f
 	// Clean up surface and texture
 	SDL_DestroySurface(surface);
 	SDL_DestroyTexture(texture);
+
+	InitWindow(800, 450, "text editor");
+
+	SetTargetFPS(60);
+
+	while (!WindowShouldClose()) {
+		
+		BeginDrawing();
+
+		ClearBackground(BLACK);
+
+		EndDrawing();
+	}
+
 }
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
