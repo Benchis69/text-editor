@@ -2,7 +2,7 @@
 #define LA_H_
 
 typedef struct {
-	float x,y
+	float x,y;
 } Vec2f;
 
 Vec2f vec2f(float x, float y);
