@@ -49,6 +49,25 @@ void render_text(SDL_Renderer *renderer, TTF_Font *font, const char *text, Vec2f
 	SDL_DestroyTexture(texture);
 }
 
+void buffer_insert_text_before_cursor(void *appstate, const char *text) {
+
+	Variables *vars = (Variables *) appstate;
+	
+	size_t text_size = strlen(text);
+	const size_t free_space = BUFFER_CAPACITY - vars->buffer_size - 1;
+	
+	if(text_size > free_space) {
+		text_size = free_space;
+	}
+	
+	memmove(vars->buffer + vars->buffer_cursor + text_size, vars->buffer + vars->buffer_cursor, vars->buffer_size - vars->buffer_cursor);
+	memcpy(vars->buffer + vars->buffer_cursor, text, text_size); 
+	vars->buffer_size += text_size; 
+	vars->buffer_cursor += text_size;
+
+	vars->buffer[vars->buffer_size] = '\0';
+}
+
 void render_cursor(void *appstate) {
 
 	Variables *vars = (Variables *) appstate;
@@ -149,15 +168,30 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 				
 				case SDLK_BACKSPACE: {
 					if(vars->buffer_size > 0) {
-						vars->buffer_size--;
+						vars->buffer_size -= 1;
 						vars->buffer[vars->buffer_size] = '\0';
 						vars->buffer_cursor = vars->buffer_size;
+					}
+				} break;
+
+				case SDLK_LEFT: {
+					if (vars->buffer_cursor > 0) {
+						vars->buffer_cursor -= 1;
+					}		
+				} break;
+
+				case SDLK_RIGHT: {
+					if (vars->buffer_cursor < vars->buffer_size) {
+						vars->buffer_cursor += 1;
 					}
 				} break;
 			}
 		} break;
 
 		case SDL_EVENT_TEXT_INPUT: {
+			buffer_insert_text_before_cursor(vars, event->text.text);
+			
+			/*
 			size_t text_size = strlen(event->text.text);
 			const size_t free_space = BUFFER_CAPACITY - vars->buffer_size - 1;
 			
@@ -168,6 +202,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 			memcpy(vars->buffer + vars->buffer_size, event->text.text, text_size); 
 			vars->buffer_size += text_size; 
 			vars->buffer_cursor = vars->buffer_size;
+			*/
 
 			vars->buffer[vars->buffer_size] = '\0';
 
