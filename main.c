@@ -4,6 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
+#ifdef __ANDROID__
+#undef __ANDROID__
+#define SDL_PLATFORM_LINUX 1
+#endif
+
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <SDL3_ttf/SDL_ttf.h>
