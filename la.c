@@ -2,15 +2,15 @@
 
 Vec2f vec2f(float x, float y) {
 	return (Vec2f) {
-		.x = x;
-		.y = y;
+		.x = x,
+		.y = y
 	};
 }
 
 Vec2f vec2fs(float x) {
 	return (Vec2f) {
-		.x = x;
-		.y = x;
+		.x = x,
+		.y = x
 	};
 }
 

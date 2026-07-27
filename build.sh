@@ -2,4 +2,4 @@
 
 set -e
 
-gcc -Wall -Wextra -o main main.c $(pkg-config --cflags --libs sdl3) -lSDL3_ttf -lm
+gcc -Wall -Wextra main.c buffer.c la.c -o main $(pkg-config --cflags --libs sdl3) -lSDL3_ttf -lm

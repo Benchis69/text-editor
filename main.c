@@ -15,6 +15,7 @@
 #include <SDL3_ttf/SDL_ttf.h>
 
 #include "./la.h"
+#include "./buffer.h"
 
 #define BUFFER_CAPACITY 1024
 
@@ -23,9 +24,9 @@ typedef struct {
 	SDL_Renderer *renderer;
 	TTF_Font  *font;
 	int font_scale;
-	char buffer[BUFFER_CAPACITY];
-	size_t buffer_cursor;
-	size_t buffer_size;
+	
+	Line line;
+	size_t cursor;
 } Variables;
 
 void render_text(SDL_Renderer *renderer, TTF_Font *font, const char *text, Vec2f pos, SDL_Color color, float scale) {
@@ -49,25 +50,6 @@ void render_text(SDL_Renderer *renderer, TTF_Font *font, const char *text, Vec2f
 	SDL_DestroyTexture(texture);
 }
 
-void buffer_insert_text_before_cursor(void *appstate, const char *text) {
-
-	Variables *vars = (Variables *) appstate;
-	
-	size_t text_size = strlen(text);
-	const size_t free_space = BUFFER_CAPACITY - vars->buffer_size - 1;
-	
-	if(text_size > free_space) {
-		text_size = free_space;
-	}
-	
-	memmove(vars->buffer + vars->buffer_cursor + text_size, vars->buffer + vars->buffer_cursor, vars->buffer_size - vars->buffer_cursor);
-	memcpy(vars->buffer + vars->buffer_cursor, text, text_size); 
-	vars->buffer_size += text_size; 
-	vars->buffer_cursor += text_size;
-
-	vars->buffer[vars->buffer_size] = '\0';
-}
-
 void render_cursor(void *appstate) {
 
 	Variables *vars = (Variables *) appstate;
@@ -79,7 +61,7 @@ void render_cursor(void *appstate) {
 	TTF_GetStringSize(vars->font, "A", 0,  &char_w, &char_h);
 
 	const SDL_FRect rect =  {
-		.x = (int) floorf(vars->buffer_cursor * (float) char_w ),
+		.x = (int) floorf((float) vars->cursor * (float) char_w ),
 		.y = 0,
 		.w = 2 * vars->font_scale, // Cursor width is 2 pixel * font scale
 		.h = char_h * vars->font_scale
@@ -103,6 +85,9 @@ bool load_font_from_file(void *appstate, const char *file_path, int size) {
 }
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
+
+	(void) argc;
+	(void) argv;
 
 	// Initialize video-subsystem and font
 	if(!SDL_Init(SDL_INIT_VIDEO)) {
@@ -139,9 +124,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
 	// Load standard font
 	if(!load_font_from_file(vars, "./fonts/Space_Mono/SpaceMono-Regular.ttf", 20)) return SDL_APP_FAILURE;
 	vars->font_scale = 1;
-	vars->buffer[0] = '\0';
-	vars->buffer_size = 0;
-	vars->buffer_cursor = 0;
+	vars->line = (Line) {0};
+	vars->cursor = 0;
 		
 	*appstate = vars;
 
@@ -167,45 +151,33 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 			switch (event->key.key) {
 				
 				case SDLK_BACKSPACE: {
-					if(vars->buffer_size > 0) {
-						vars->buffer_size -= 1;
-						vars->buffer[vars->buffer_size] = '\0';
-						vars->buffer_cursor = vars->buffer_size;
+					line_backspace(&vars->line, vars->cursor);
+					if (vars->cursor > 0) {
+						vars->cursor -= 1;
 					}
 				} break;
 
+				case SDLK_DELETE: {
+					line_delete(&vars->line, vars->cursor);
+				} break;
+
 				case SDLK_LEFT: {
-					if (vars->buffer_cursor > 0) {
-						vars->buffer_cursor -= 1;
+					if (vars->cursor > 0) {
+						vars->cursor -= 1;
 					}		
 				} break;
 
 				case SDLK_RIGHT: {
-					if (vars->buffer_cursor < vars->buffer_size) {
-						vars->buffer_cursor += 1;
+					if (vars->cursor < vars->line.size) {
+						vars->cursor += 1;
 					}
 				} break;
 			}
 		} break;
 
 		case SDL_EVENT_TEXT_INPUT: {
-			buffer_insert_text_before_cursor(vars, event->text.text);
-			
-			/*
-			size_t text_size = strlen(event->text.text);
-			const size_t free_space = BUFFER_CAPACITY - vars->buffer_size - 1;
-			
-			if(text_size > free_space) {
-				text_size = free_space;
-			}
-
-			memcpy(vars->buffer + vars->buffer_size, event->text.text, text_size); 
-			vars->buffer_size += text_size; 
-			vars->buffer_cursor = vars->buffer_size;
-			*/
-
-			vars->buffer[vars->buffer_size] = '\0';
-
+			line_insert_text_before(&vars->line, event->text.text, vars->cursor);
+			vars->cursor += strlen(event->text.text);
 		} break;
 			
 	}
@@ -230,8 +202,8 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 		.a = 0xFF
 	};
 
-	if(vars->buffer_size > 0) {
-		render_text(vars->renderer, vars->font, vars->buffer, pos, color, vars->font_scale);
+	if(vars->line.size > 0) {
+		render_text(vars->renderer, vars->font, vars->line.chars, pos, color, vars->font_scale);
 	}
 
 	render_cursor(vars);
