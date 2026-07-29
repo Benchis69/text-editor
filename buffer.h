@@ -16,7 +16,7 @@ void line_delete(Line *line, size_t col);
 typedef struct {
 	size_t capacity;
 	size_t size;
-	Lines *lines;
+	Line *lines;
 	size_t cursor_row;
 	size_t cursor_col;
 } Editor;
