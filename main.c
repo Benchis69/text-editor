@@ -10,7 +10,7 @@
 #include <SDL3_ttf/SDL_ttf.h>
 
 #include "./la.h"
-#include "./buffer.h"
+#include "./editor.h"
 
 #define BUFFER_CAPACITY 1024
 
@@ -20,11 +20,12 @@ typedef struct {
 	TTF_Font  *font;
 	int font_scale;
 	
-	Line line;
-	size_t cursor;
+	Editor editor;
 } Variables;
 
 void render_text(SDL_Renderer *renderer, TTF_Font *font, const char *text, Vec2f pos, SDL_Color color, float scale) {
+
+	if (text == NULL || text[0] == '\0') return;
 	
 	// Convert text to surface
 	SDL_Surface *surface = TTF_RenderText_Blended(font, text, 0, color);
@@ -55,15 +56,34 @@ void render_cursor(void *appstate) {
 	// Get values for char "A", works only for monospace fonts
 	TTF_GetStringSize(vars->font, "A", 0,  &char_w, &char_h);
 
+	const Vec2f pos = vec2f((float) vars->editor.cursor_col * (float) char_w, (float) vars->editor.cursor_row * (float) char_h);
+
 	const SDL_FRect rect =  {
-		.x = (int) floorf((float) vars->cursor * (float) char_w ),
-		.y = 0,
+		.x = (int) floorf(pos.x),
+		.y = (int) floorf(pos.y), // maybe noch * vars->font_scale
 		.w = 2 * vars->font_scale, // Cursor width is 2 pixel * font scale
 		.h = char_h * vars->font_scale
 	};
 	
 	SDL_SetRenderDrawColor(vars->renderer, 0xFF, 0xFF, 0xFF, 0xFF); // Set render draw color to white
 	SDL_RenderRect(vars->renderer, &rect);
+	
+	/*
+	Only if I increase cursor width to a full block
+
+	SDL_Color color = {
+		.r = 0xFF,
+		.g = 0xFF,
+		.b = 0xFF,
+		.a = 0xFF
+	};
+
+	const char *c = editor_char_under_cursor(&vars->editor);
+		
+	if (c) {
+		render_text(vars->renderer, vars->font, c, pos, color, vars->font_scale);
+	}
+	*/
 }
 
 bool load_font_from_file(void *appstate, const char *file_path, int size) {
@@ -119,8 +139,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
 	// Load standard font
 	if(!load_font_from_file(vars, "./fonts/Space_Mono/SpaceMono-Regular.ttf", 20)) return SDL_APP_FAILURE;
 	vars->font_scale = 1;
-	vars->line = (Line) {0};
-	vars->cursor = 0;
+	vars->editor = (Editor) {0};
 		
 	*appstate = vars;
 
@@ -146,33 +165,27 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 			switch (event->key.key) {
 				
 				case SDLK_BACKSPACE: {
-					line_backspace(&vars->line, vars->cursor);
-					if (vars->cursor > 0) {
-						vars->cursor -= 1;
-					}
+					editor_backspace(&vars->editor);
 				} break;
 
 				case SDLK_DELETE: {
-					line_delete(&vars->line, vars->cursor);
+					editor_delete(&vars->editor);
 				} break;
 
 				case SDLK_LEFT: {
-					if (vars->cursor > 0) {
-						vars->cursor -= 1;
+					if (vars->editor.cursor_col > 0) {
+						vars->editor.cursor_col -= 1;
 					}		
 				} break;
 
 				case SDLK_RIGHT: {
-					if (vars->cursor < vars->line.size) {
-						vars->cursor += 1;
-					}
+					vars->editor.cursor_col += 1;
 				} break;
 			}
 		} break;
 
 		case SDL_EVENT_TEXT_INPUT: {
-			line_insert_text_before(&vars->line, event->text.text, vars->cursor);
-			vars->cursor += strlen(event->text.text);
+			editor_insert_text_before_cursor(&vars->editor, event->text.text);
 		} break;
 			
 	}
@@ -197,8 +210,11 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 		.a = 0xFF
 	};
 
-	if(vars->line.size > 0) {
-		render_text(vars->renderer, vars->font, vars->line.chars, pos, color, vars->font_scale);
+	for (size_t row = 0; row < vars->editor.size; row++) {
+		Line *line = &vars->editor.lines[row];
+		if (line->chars != NULL && line->size > 0 ) {
+			render_text(vars->renderer, vars->font, line->chars, pos, color, vars->font_scale);
+		}
 	}
 
 	render_cursor(vars);
