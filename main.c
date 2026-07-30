@@ -106,10 +106,19 @@ bool load_font_from_file(void *appstate, const char *file_path, int size) {
 	return true;
 }
 
+void usage(FILE *stream) {
+
+	fprintf(stream, "Usage: text editor [FILE-PATH]");
+}
+
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
 
-	(void) argc;
-	(void) argv;
+	const char *file_path = NULL;
+	
+	// Set file path
+	if (argc > 1) {
+		file_path = argv[1];
+	}
 
 	// Initialize video-subsystem and font
 	if(!SDL_Init(SDL_INIT_VIDEO)) {
@@ -149,6 +158,11 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
 	vars->editor = (Editor) {0};
 		
 	*appstate = vars;
+	
+	// Load file
+	if (file_path) {
+		editor_load_from_file(&vars->editor, file_path);
+	}
 
 	// Enable text input 
 	if (!SDL_StartTextInput(vars->window)) {
@@ -176,7 +190,9 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 				} break;
 
 				case SDLK_F2: {
-					editor_save_to_file(&vars->editor, "output");
+					if (file_path) {
+						editor_save_to_file(&vars->editor, file_path);
+					}
 				} break;
 
 				case SDLK_DELETE: {
@@ -236,7 +252,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 	};
 
 	for (size_t row = 0; row < vars->editor.size; row++) {
-		pos = vec2f(0.0f, row * vars->font.char_h * vars->font_scale);
+		pos = vec2f(0.0f, (float) row * vars->font.char_h * vars->font_scale);
 		
 		Line *line = &vars->editor.lines[row];
 		if (line->chars != NULL && line->size > 0 ) {
