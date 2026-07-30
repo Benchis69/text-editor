@@ -25,6 +25,7 @@ typedef struct {
 	SDL_Renderer *renderer;
 	Font  font;
 	int font_scale;
+	char *file_path;
 	
 	Editor editor;
 } Variables;
@@ -113,7 +114,7 @@ void usage(FILE *stream) {
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
 
-	const char *file_path = NULL;
+	char *file_path = NULL;
 	
 	// Set file path
 	if (argc > 1) {
@@ -155,13 +156,19 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
 	// Load standard font
 	if(!load_font_from_file(vars, "./fonts/Space_Mono/SpaceMono-Regular.ttf", 20)) return SDL_APP_FAILURE;
 	vars->font_scale = 1;
+	vars->file_path = file_path;	
+
 	vars->editor = (Editor) {0};
 		
 	*appstate = vars;
 	
 	// Load file
-	if (file_path) {
-		editor_load_from_file(&vars->editor, file_path);
+	if (vars->file_path) {
+		FILE *f = fopen(file_path, "r");
+		if (f) {		
+			editor_load_from_file(&vars->editor, f);
+			fclose(f);
+		}
 	}
 
 	// Enable text input 
@@ -190,8 +197,8 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 				} break;
 
 				case SDLK_F2: {
-					if (file_path) {
-						editor_save_to_file(&vars->editor, file_path);
+					if (vars->file_path) {
+						editor_save_to_file(&vars->editor, vars->file_path);
 					}
 				} break;
 
