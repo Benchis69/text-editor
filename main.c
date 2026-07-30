@@ -15,20 +15,26 @@
 #define BUFFER_CAPACITY 1024
 
 typedef struct {
+	TTF_Font *font;
+	int char_w;
+	int char_h;
+} Font;
+
+typedef struct {
 	SDL_Window *window;
 	SDL_Renderer *renderer;
-	TTF_Font  *font;
+	Font  font;
 	int font_scale;
 	
 	Editor editor;
 } Variables;
 
-void render_text(SDL_Renderer *renderer, TTF_Font *font, const char *text, Vec2f pos, SDL_Color color, float scale) {
+void render_text(SDL_Renderer *renderer, Font font, const char *text, Vec2f pos, SDL_Color color, float scale) {
 
 	if (text == NULL || text[0] == '\0') return;
 	
 	// Convert text to surface
-	SDL_Surface *surface = TTF_RenderText_Blended(font, text, 0, color);
+	SDL_Surface *surface = TTF_RenderText_Blended(font.font, text, 0, color);
 
 	// Convert surface to texture 
 	SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
@@ -50,19 +56,13 @@ void render_cursor(void *appstate) {
 
 	Variables *vars = (Variables *) appstate;
 
-	int char_w = 0;
-	int char_h = 0;
-
-	// Get values for char "A", works only for monospace fonts
-	TTF_GetStringSize(vars->font, "A", 0,  &char_w, &char_h);
-
-	const Vec2f pos = vec2f((float) vars->editor.cursor_col * (float) char_w, (float) vars->editor.cursor_row * (float) char_h);
+	const Vec2f pos = vec2f((float) vars->editor.cursor_col * (float) vars->font.char_w, (float) vars->editor.cursor_row * (float) vars->font.char_h);
 
 	const SDL_FRect rect =  {
 		.x = (int) floorf(pos.x),
 		.y = (int) floorf(pos.y), // maybe noch * vars->font_scale
 		.w = 2 * vars->font_scale, // Cursor width is 2 pixel * font scale
-		.h = char_h * vars->font_scale
+		.h = vars->font.char_h * vars->font_scale
 	};
 	
 	SDL_SetRenderDrawColor(vars->renderer, 0xFF, 0xFF, 0xFF, 0xFF); // Set render draw color to white
@@ -89,12 +89,19 @@ void render_cursor(void *appstate) {
 bool load_font_from_file(void *appstate, const char *file_path, int size) {
 	
 	Variables *vars = (Variables *) appstate;
+
+	int char_w, char_h;
 	
-	vars->font = TTF_OpenFont(file_path, size);
-	if (!vars->font) {
+	vars->font.font = TTF_OpenFont(file_path, size);
+	if (!vars->font.font) {
 		SDL_Log("Couldn't load font: %s\n", SDL_GetError());
 		return false;
 	}
+
+	// Get values for char "A", works only for monospace fonts
+	TTF_GetStringSize(vars->font.font, "A", 0,  &char_w, &char_h);
+	vars->font.char_w = char_w;
+	vars->font.char_h = char_h;
 
 	return true;
 }
@@ -172,6 +179,20 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 					editor_delete(&vars->editor);
 				} break;
 
+				case SDLK_RETURN: {
+					editor_insert_new_line(&vars->editor);
+				} break;
+
+				case SDLK_UP: {
+					if (vars->editor.cursor_row > 0) {
+						vars->editor.cursor_row -= 1;
+					}
+				} break;
+
+				case SDLK_DOWN: {
+					vars->editor.cursor_row += 1;
+				} break;
+
 				case SDLK_LEFT: {
 					if (vars->editor.cursor_col > 0) {
 						vars->editor.cursor_col -= 1;
@@ -211,6 +232,8 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 	};
 
 	for (size_t row = 0; row < vars->editor.size; row++) {
+		pos = vec2f(0.0f, row * vars->font.char_h * vars->font_scale);
+		
 		Line *line = &vars->editor.lines[row];
 		if (line->chars != NULL && line->size > 0 ) {
 			render_text(vars->renderer, vars->font, line->chars, pos, color, vars->font_scale);
@@ -240,8 +263,8 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
 			SDL_DestroyRenderer(vars->renderer);
 		}
 
-		if(vars->font) {	
-			TTF_CloseFont(vars->font);
+		if(vars->font.font) {	
+			TTF_CloseFont(vars->font.font);
 			TTF_Quit();
 		}
 
