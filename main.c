@@ -175,6 +175,10 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 					editor_backspace(&vars->editor);
 				} break;
 
+				case SDLK_F2: {
+					editor_save_to_file(&vars->editor, "output");
+				} break;
+
 				case SDLK_DELETE: {
 					editor_delete(&vars->editor);
 				} break;
