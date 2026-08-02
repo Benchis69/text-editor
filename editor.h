@@ -24,6 +24,7 @@ typedef struct {
 	size_t cursor_col;
 } Editor;
 
+void editor_init(Editor *editor);
 void editor_save_to_file(const Editor *editor, const char *file_path);
 void editor_load_from_file(Editor *editor, FILE *file);
 
@@ -31,6 +32,7 @@ void editor_insert_text_before_cursor(Editor *editor, const char *text);
 void editor_insert_new_line(Editor *editor);
 void editor_backspace(Editor *editor);
 void editor_delete(Editor *editor);
+void editor_delete_line(Editor *editor, size_t *row);
 const char *editor_char_under_cursor(const Editor *editor);
 
 #endif // EDITOR_H

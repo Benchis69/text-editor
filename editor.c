@@ -106,6 +106,18 @@ static void editor_expand(Editor *editor, size_t n) {
 	}
 }
 
+void editor_init(Editor *editor) {
+	memset(editor, 0, sizeof(*editor));
+
+	editor_expand(editor, 1);
+
+	memset(&editor->lines[0], 0, sizeof(Line));
+
+	editor->size = 1;
+	editor->cursor_row = 0;
+	editor->cursor_col = 0;
+}
+
 void editor_insert_new_line(Editor *editor) {
 	
 	if (editor->cursor_row > editor->size) editor->cursor_row = editor->size;
@@ -162,6 +174,12 @@ void editor_delete(Editor *editor) {
 	line_delete(&editor->lines[editor->cursor_row], &editor->cursor_col);
 }
 
+void editor_delete_line(Editor *editor, size_t *row) {
+	
+	if (editor.lines == NULL && editor.size == 0) return;
+
+}
+
 const char *editor_char_under_cursor(const Editor *editor) {
 
 	if (editor->cursor_row < editor->size) {
@@ -191,7 +209,7 @@ void editor_save_to_file(const Editor *editor, const char *file_path) {
 
 void editor_load_from_file(Editor *editor, FILE *file) {
 
-	assert(editor->lines == NULL && "You can only load files into an empty editor");
+	//assert(editor->lines == NULL && "You can only load files into an empty editor");
 
 	editor_create_first_new_line(editor);
 
