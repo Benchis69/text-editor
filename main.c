@@ -13,6 +13,10 @@
 #include "./editor.h"
 
 #define BUFFER_CAPACITY 1024
+#define SCREEN_WIDTH 1600
+#define SCREEN_HEIGHT 900
+#define FPS 60
+#define DELTA_TIME (1.0f / FPS)
 
 typedef struct {
 	TTF_Font *font;
@@ -28,7 +32,25 @@ typedef struct {
 	char *file_path;
 	
 	Editor editor;
+
+	Vec2f camera_pos;
+	Vec2f camera_vel;
 } Variables;
+
+Vec2f window_size(SDL_Window *window) {
+	
+	int w, h;
+	SDL_GetWindowSize(window, &w, &h);
+
+	return vec2f((float) w, (float) h);
+}
+
+Vec2f camera_project_point(void *appstate, Vec2f point) {
+
+	Variables *vars = (Variables *) appstate;
+	
+	return vec2f_add(vec2f_sub(point, vars->camera_pos), vec2f_mul(window_size(vars->window), vec2fs(0.5)));
+}
 
 void render_text(SDL_Renderer *renderer, Font font, const char *text, Vec2f pos, SDL_Color color, float scale) {
 
@@ -57,17 +79,19 @@ void render_cursor(void *appstate) {
 
 	Variables *vars = (Variables *) appstate;
 
-	const Vec2f pos = vec2f((float) vars->editor.cursor_col * (float) vars->font.char_w, (float) vars->editor.cursor_row * (float) vars->font.char_h);
+	const Vec2f pos = camera_project_point(vars, vec2f(
+		(float) vars->editor.cursor_col * (float) vars->font.char_w * vars->font_scale,
+		(float) vars->editor.cursor_row * (float) vars->font.char_h * vars->font_scale));
 
 	const SDL_FRect rect =  {
 		.x = (int) floorf(pos.x),
-		.y = (int) floorf(pos.y), // maybe noch * vars->font_scale
+		.y = (int) floorf(pos.y),
 		.w = 2 * vars->font_scale, // Cursor width is 2 pixel * font scale
 		.h = vars->font.char_h * vars->font_scale
 	};
 	
 	SDL_SetRenderDrawColor(vars->renderer, 0xFF, 0xFF, 0xFF, 0xFF); // Set render draw color to white
-	SDL_RenderRect(vars->renderer, &rect);
+	SDL_RenderFillRect(vars->renderer, &rect);
 	
 	/*
 	Only if I increase cursor width to a full block
@@ -136,7 +160,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
 	SDL_Window *window = NULL;
 	SDL_Renderer *renderer = NULL;
 
-	if(!SDL_CreateWindowAndRenderer("Text Editor", 1600, 900, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
+	if(!SDL_CreateWindowAndRenderer("Text Editor", SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
 		SDL_Log("Couldn't create window and renderer : %s\n", SDL_GetError());
 		return SDL_APP_FAILURE;
 	}
@@ -159,6 +183,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
 	vars->file_path = file_path;	
 
 	vars->editor = (Editor) {0};
+
+	vars->camera_pos = (Vec2f) {0};
+	vars->camera_vel = (Vec2f) {0};
 		
 	*appstate = vars;
 	
@@ -244,13 +271,21 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 
 SDL_AppResult SDL_AppIterate(void *appstate) {
 	
+	const Uint32 start = SDL_GetTicks();
+
 	Variables *vars = (Variables *) appstate;
+
+	{
+		const Vec2f cursor_pos = vec2f((float) vars->editor.cursor_col * (float) vars->font.char_w, (float) vars->editor.cursor_row * (float) vars->font.char_h);
+		vars->camera_vel = vec2f_mul(vec2f_sub(cursor_pos, vars->camera_pos), vec2fs(2.0f));
+
+		vars->camera_pos = vec2f_add(vars->camera_pos, vec2f_mul(vars->camera_vel, vec2fs(DELTA_TIME)));
+	}
 
 	SDL_SetRenderDrawColor(vars->renderer, 30, 30, 30, 255);
 
 	SDL_RenderClear(vars->renderer);
 	
-	Vec2f pos = {0.0f, 0.0f};
 	SDL_Color color = {
 		.r = 0xFF,
 		.g = 0xFF,
@@ -258,12 +293,13 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 		.a = 0xFF
 	};
 
-	for (size_t row = 0; row < vars->editor.size; row++) {
-		pos = vec2f(0.0f, (float) row * vars->font.char_h * vars->font_scale);
-		
+	for (size_t row = 0; row < vars->editor.size; row++) {	
 		Line *line = &vars->editor.lines[row];
+
+		const Vec2f line_pos = camera_project_point(vars, vec2f(0.0f, (float) row * vars->font.char_h * vars->font_scale));
+
 		if (line->chars != NULL && line->size > 0 ) {
-			render_text(vars->renderer, vars->font, line->chars, pos, color, vars->font_scale);
+			render_text(vars->renderer, vars->font, line->chars, line_pos, color, vars->font_scale);
 		}
 	}
 
@@ -271,11 +307,18 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
 	SDL_RenderPresent(vars->renderer);
 
+	const Uint32 duration = SDL_GetTicks() - start;
+	const Uint32 delta_time_ms = 1000 / FPS;
+
+	if (duration < delta_time_ms) {
+		SDL_Delay(delta_time_ms - duration);
+	}
+
 	return SDL_APP_CONTINUE;
 }
 
 void SDL_AppQuit(void *appstate, SDL_AppResult result) {
-
+	
 	Variables *vars = (Variables *) appstate;
 
 	(void) result;
