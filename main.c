@@ -244,6 +244,12 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 					editor_backspace(&vars->editor);
 				} break;
 
+				/* To be implemented
+				case SDLK_PAGEDOWN: {
+					editor_delete_line(&vars->editor, &vars->editor.cursor_row);
+				} break;
+				*/
+
 				case SDLK_F2: {
 					if (vars->file_path) {
 						editor_save_to_file(&vars->editor, vars->file_path);
@@ -252,6 +258,10 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 
 				case SDLK_DELETE: {
 					editor_delete(&vars->editor);
+				} break;
+				
+				case SDLK_TAB: {
+					editor_insert_text_before_cursor(&vars->editor, "    ");
 				} break;
 
 				case SDLK_RETURN: {
@@ -330,7 +340,11 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 		}
 
 		const Vec2f cursor_pos = vec2f((float) cursor_x, (float) vars->editor.cursor_row * (float) vars->font.char_h);
-		vars->camera_vel = vec2f_mul(vec2f_sub(cursor_pos, vars->camera_pos), vec2fs(2.0f));
+
+		Vec2f target_pos = vars->camera_pos;
+		target_pos.x = (window_size(vars->window).x / 2.0f) - 50.0f;
+
+		vars->camera_vel = vec2f_mul(vec2f_sub(target_pos, vars->camera_pos), vec2fs(15.0f));
 
 		vars->camera_pos = vec2f_add(vars->camera_pos, vec2f_mul(vars->camera_vel, vec2fs(DELTA_TIME)));
 	}

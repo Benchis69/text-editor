@@ -125,10 +125,32 @@ void editor_insert_new_line(Editor *editor) {
 	editor_expand(editor, 1);
 	
 	const size_t line_size = sizeof(editor->lines[0]);
-
+	
 	memmove(editor->lines + editor->cursor_row + 1, editor->lines + editor->cursor_row, (editor->size - editor->cursor_row) * line_size);
 	memset(&editor->lines[editor->cursor_row + 1], 0, line_size);
-	
+
+	Line *current_line = &editor->lines[editor->cursor_row];
+	Line *new_line = &editor->lines[editor->cursor_row + 1];
+
+	if (editor->cursor_col > current_line->size) {
+		editor->cursor_col = current_line->size;
+	}
+
+	size_t chars_to_move = current_line->size - editor->cursor_col;
+
+	if (chars_to_move > 0) {
+		line_expand(new_line, chars_to_move);
+		memcpy(new_line->chars, current_line->chars + editor->cursor_col, chars_to_move);
+		new_line->size = chars_to_move;
+		new_line->chars[new_line->size] = '\0';
+	}
+
+	current_line->size = editor->cursor_col;
+
+	if (current_line->chars != NULL) {
+		current_line->chars[current_line->size] = '\0';
+	}
+
 	editor->cursor_row += 1;
 	editor->cursor_col = 0;
 	editor->size += 1;
@@ -153,6 +175,16 @@ void editor_insert_text_before_cursor(Editor *editor, const char *text) {
 	
 	editor_create_first_new_line(editor);
 
+	for (size_t i = 0; text[i] != '\0'; i++) {
+		if (text[i] == '\t') {
+			line_insert_text_before(&editor->lines[editor->cursor_row], "    ", &editor->cursor_col);
+		}
+		else if (text[i] != '\r') {
+			char c_str[2] = {text[i], '\0'};
+			line_insert_text_before(&editor->lines[editor->cursor_row], c_str, &editor->cursor_col);
+		}
+	}
+
 	line_insert_text_before(&editor->lines[editor->cursor_row], text, &editor->cursor_col);
 }
 
@@ -176,7 +208,12 @@ void editor_delete(Editor *editor) {
 
 void editor_delete_line(Editor *editor, size_t *row) {
 	
-	if (editor.lines == NULL && editor.size == 0) return;
+	if (editor->lines == NULL || editor->size == 1) return;
+
+	memmove(editor->lines + *row - 1, editor->lines + *row, editor->size - *row);
+	editor->size -= 1;
+
+	editor->cursor_row -= 1;
 
 }
 
@@ -207,9 +244,18 @@ void editor_save_to_file(const Editor *editor, const char *file_path) {
 	fclose(f);
 }
 
-void editor_load_from_file(Editor *editor, FILE *file) {
+static void line_append_filtered(Line *line, const char *text, size_t text_size) {
+	for (size_t i = 0; i < text_size; i++) {
+		if (text[i] == '\t') {
+			line_append_text_sized(line, "    ", 4);
+		}
+		else if (text[i] != '\r') {
+			line_append_text_sized(line, &text[i], 1);
+		}
+	}
+}
 
-	//assert(editor->lines == NULL && "You can only load files into an empty editor");
+void editor_load_from_file(Editor *editor, FILE *file) {
 
 	editor_create_first_new_line(editor);
 
@@ -226,13 +272,17 @@ void editor_load_from_file(Editor *editor, FILE *file) {
 		while (chunk_sv.count > 0) {
 			String_View chunk_line = {0};
 			Line *line = &editor->lines[editor->size - 1];
+
 			if (sv_try_chop_by_delim(&chunk_sv, '\n', &chunk_line)) {
-				line_append_text_sized(line, chunk_line.data, chunk_line.count);
+
+				line_append_filtered(line, chunk_line.data, chunk_line.count);
+
+				editor->cursor_col = line->size;
 				editor_insert_new_line(editor);
 			}
 
 			else {
-				line_append_text_sized(line, chunk_sv.data, chunk_sv.count);
+				line_append_filtered(line, chunk_sv.data, chunk_sv.count);
 				chunk_sv = SV_NULL;
 			}
 			
@@ -240,6 +290,7 @@ void editor_load_from_file(Editor *editor, FILE *file) {
 	}
 
 	editor->cursor_row = 0;
+	editor->cursor_col = 0;
 }
 
 
