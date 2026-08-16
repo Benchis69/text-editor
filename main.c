@@ -233,6 +233,26 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 			return SDL_APP_SUCCESS;		     
 		} break;
 
+		case SDL_EVENT_MOUSE_WHEEL: {
+			
+			int scroll_speed = 4;
+			float scroll_y = event->wheel.y * (float) scroll_speed;
+    
+    			long long new_row = (long long)vars->editor.cursor_row - (long long)scroll_y;
+
+    			if (new_row < 0) {
+        			vars->editor.cursor_row = 0;
+    			} 
+    
+			else if ((size_t)new_row >= vars->editor.size) {
+        			vars->editor.cursor_row = vars->editor.size > 0 ? vars->editor.size - 1 : 0;
+    			}
+		       	
+    			else {
+        			vars->editor.cursor_row = (size_t)new_row;
+    			}			    
+		} break;
+
 		case SDL_EVENT_KEY_DOWN: {
 			switch (event->key.key) {
 				
@@ -341,11 +361,31 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
 		const Vec2f cursor_pos = vec2f((float) cursor_x, (float) vars->editor.cursor_row * (float) vars->font.char_h);
 
+		const Vec2f screen_cursor_pos = camera_project_point(vars, cursor_pos);
+
 		Vec2f target_pos = vars->camera_pos;
-		target_pos.x = (window_size(vars->window).x / 2.0f) - 50.0f;
+
+		float margin_x = 100.0f; // 100 Pixel Abstand zum Rand
+		if (screen_cursor_pos.x > SCREEN_WIDTH - margin_x) {
+			target_pos.x += (screen_cursor_pos.x - (SCREEN_WIDTH - margin_x));
+		}
+
+		else if (screen_cursor_pos.x < margin_x) {
+        		target_pos.x -= (margin_x - screen_cursor_pos.x); 
+			if (target_pos.x < 0) target_pos.x = 0;
+		}
+
+		float margin_y = 100.0f; // 100 Pixel Abstand zum oberen/unteren Rand
+		if (screen_cursor_pos.y > SCREEN_HEIGHT - margin_y) {
+    		target_pos.y += (screen_cursor_pos.y - (SCREEN_HEIGHT - margin_y));
+		}
+
+		else if (screen_cursor_pos.y < margin_y) {
+    			target_pos.y -= (margin_y - screen_cursor_pos.y);
+    			if (target_pos.y < 0) target_pos.y = 0;
+		}
 
 		vars->camera_vel = vec2f_mul(vec2f_sub(target_pos, vars->camera_pos), vec2fs(15.0f));
-
 		vars->camera_pos = vec2f_add(vars->camera_pos, vec2f_mul(vars->camera_vel, vec2fs(DELTA_TIME)));
 	}
 
