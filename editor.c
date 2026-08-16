@@ -185,7 +185,6 @@ void editor_insert_text_before_cursor(Editor *editor, const char *text) {
 		}
 	}
 
-	line_insert_text_before(&editor->lines[editor->cursor_row], text, &editor->cursor_col);
 }
 
 void editor_backspace(Editor *editor) {
