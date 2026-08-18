@@ -209,11 +209,26 @@ void editor_delete_line(Editor *editor, size_t *row) {
 	
 	if (editor->lines == NULL || editor->size == 1) return;
 
-	memmove(editor->lines + *row - 1, editor->lines + *row, editor->size - *row);
-	editor->size -= 1;
+	if (editor->lines[*row].chars != NULL) {
+        	free(editor->lines[*row].chars);
+    	}
+	
+	size_t lines_to_move = editor->size - *row -1;
 
+	if (lines_to_move > 0) {
+		memmove(editor->lines + *row, editor->lines + *row + 1, lines_to_move * sizeof(Line));
+	}
+
+	editor->size -= 1;
 	editor->cursor_row -= 1;
 
+	if (editor->cursor_row >= editor->size) {
+        	editor->cursor_row = editor->size > 0 ? editor->size - 1 : 0;
+	}
+
+	if (editor->cursor_col > editor->lines[editor->cursor_row].size) {
+        	editor->cursor_col = editor->lines[editor->cursor_row].size;
+	}
 }
 
 const char *editor_char_under_cursor(const Editor *editor) {
@@ -243,7 +258,7 @@ void editor_save_to_file(const Editor *editor, const char *file_path) {
 	fclose(f);
 }
 
-static void line_append_filtered(Line *line, const char *text, size_t text_size) {
+void line_append_filtered(Line *line, const char *text, size_t text_size) {
 	for (size_t i = 0; i < text_size; i++) {
 		if (text[i] == '\t') {
 			line_append_text_sized(line, "    ", 4);

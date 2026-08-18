@@ -49,7 +49,7 @@ Vec2f camera_project_point(void *appstate, Vec2f point) {
 
 	Variables *vars = (Variables *) appstate;
 	
-	return vec2f_add(vec2f_sub(point, vars->camera_pos), vec2f_mul(window_size(vars->window), vec2fs(0.5)));
+	return vec2f_add(vec2f_sub(point, vars->camera_pos), vec2fs(100.0f));
 }
 
 void render_text(SDL_Renderer *renderer, Font font, const char *text, Vec2f pos, SDL_Color color, float scale) {
@@ -136,7 +136,7 @@ int load_font_from_file(void *appstate, const char *file_path, int size) {
 	// Get values for char "A", works only for monospace fonts
 	TTF_GetStringSize(vars->font.font, "A", 0,  &w1, &h);
 
-	// Get values for AA to measure real distance
+	// Get values for "AA" to measure real distance
 	TTF_GetStringSize(vars->font.font, "AA", 0, &w2, &h);
 
 	vars->font.char_w = w2 - w1;
@@ -261,14 +261,39 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 				} break;
 
 				case SDLK_BACKSPACE: {
-					editor_backspace(&vars->editor);
+					if (vars->editor.cursor_col == 0) {
+						if (vars->editor.cursor_row > 0) {
+							size_t prev_row = vars->editor.cursor_row - 1;
+
+            						Line *prev_line = &vars->editor.lines[prev_row];
+            						Line *curr_line = &vars->editor.lines[vars->editor.cursor_row];
+
+							size_t old_col = prev_line->size;
+
+							if (curr_line->chars != NULL && curr_line->size > 0) {
+								line_append_filtered(prev_line, curr_line->chars, curr_line->size);
+							}
+
+
+							editor_delete_line(&vars->editor, &vars->editor.cursor_row);
+							
+							vars->editor.cursor_row = prev_row;
+            						vars->editor.cursor_col = old_col;
+						}
+					}
+
+					else {
+						Line *line = &vars->editor.lines[vars->editor.cursor_row];
+        					line_delete(line, &vars->editor.cursor_col - 1);
+        					vars->editor.cursor_col -= 1;
+					}
 				} break;
 
-				/* To be implemented
-				case SDLK_PAGEDOWN: {
+				
+				case SDLK_F3: {
 					editor_delete_line(&vars->editor, &vars->editor.cursor_row);
 				} break;
-				*/
+				
 
 				case SDLK_F2: {
 					if (vars->file_path) {
@@ -359,13 +384,15 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 			TTF_GetStringSize(vars->font.font, line->chars, vars->editor.cursor_col, &cursor_x, &dummy_h);
 		}
 
-		const Vec2f cursor_pos = vec2f((float) cursor_x, (float) vars->editor.cursor_row * (float) vars->font.char_h);
+		const Vec2f cursor_pos = vec2f(
+				(float) cursor_x * vars->font_scale,
+				(float) vars->editor.cursor_row * (float) vars->font.char_h * vars->font_scale);
 
 		const Vec2f screen_cursor_pos = camera_project_point(vars, cursor_pos);
 
 		Vec2f target_pos = vars->camera_pos;
 
-		float margin_x = 100.0f; // 100 Pixel Abstand zum Rand
+		float margin_x = 100.0f; 
 		if (screen_cursor_pos.x > SCREEN_WIDTH - margin_x) {
 			target_pos.x += (screen_cursor_pos.x - (SCREEN_WIDTH - margin_x));
 		}
@@ -375,7 +402,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 			if (target_pos.x < 0) target_pos.x = 0;
 		}
 
-		float margin_y = 100.0f; // 100 Pixel Abstand zum oberen/unteren Rand
+		float margin_y = 100.0f;
 		if (screen_cursor_pos.y > SCREEN_HEIGHT - margin_y) {
     		target_pos.y += (screen_cursor_pos.y - (SCREEN_HEIGHT - margin_y));
 		}
