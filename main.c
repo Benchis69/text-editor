@@ -504,6 +504,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 		SDL_SetRenderDrawColor(vars->renderer, 30, 30, 30, 255);
 		SDL_RenderFillRect(vars->renderer, &header_bar);
 
+		// Render file, edit, help 
 		render_text(vars->renderer, vars->font, "File", vec2f(HEADER_BAR_FILE_POS_X, HEADER_BAR_FILE_POS_Y), color, vars->font_scale);
 		render_text(vars->renderer, vars->font, "Edit", vec2f(HEADER_BAR_EDIT_POS_X, HEADER_BAR_EDIT_POS_Y), color, vars->font_scale);
 		render_text(vars->renderer, vars->font, "Help", vec2f(HEADER_BAR_HELP_POS_X, HEADER_BAR_HELP_POS_Y), color, vars->font_scale);
