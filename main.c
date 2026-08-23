@@ -52,6 +52,24 @@ Vec2f camera_project_point(void *appstate, Vec2f point) {
 	return vec2f_add(vec2f_sub(point, vars->camera_pos), vec2fs(100.0f));
 }
 
+size_t line_get_visual_col(const Line *line, size_t char_col) {
+
+	size_t visual_col = 0;
+	size_t limit = (char_col < line->size) ? char_col : line->size;
+
+	for (size_t i = 0; i < limit; i++) {
+		if (line->chars[i] == '\t') {
+			visual_col = (visual_col / 4 + 1) * 4;
+		}
+
+		else {
+			visual_col += 1;
+		}
+	}
+
+	return visual_col;
+}
+
 void render_text(SDL_Renderer *renderer, Font font, const char *text, Vec2f pos, SDL_Color color, float scale) {
 
 	if (text == NULL || text[0] == '\0') return;
@@ -81,13 +99,9 @@ void render_cursor(void *appstate) {
 
 	Line *line = &vars->editor.lines[vars->editor.cursor_row];
 
-	int cursor_x = 0;
-	int dummy_h = 0;
-
 	// Measure exact distance from text to cursor
-	if (line->chars != NULL && vars->editor.cursor_col > 0) {
-		TTF_GetStringSize(vars->font.font, line->chars, vars->editor.cursor_col, &cursor_x, &dummy_h);
-	}
+	size_t visual_col = line_get_visual_col(line, vars->editor.cursor_col);
+	int cursor_x = (int) visual_col * vars->font.char_w;
 
 	const Vec2f pos = camera_project_point(vars, vec2f(
 		(float) cursor_x * vars->font_scale,
@@ -141,6 +155,7 @@ int load_font_from_file(void *appstate, const char *file_path, int size) {
 
 	vars->font.char_w = w2 - w1;
 	vars->font.char_h = h;
+	
 
 	return 0;
 }
@@ -150,22 +165,27 @@ void usage(FILE *stream) {
 	fprintf(stream, "Usage: text editor [FILE-PATH]");
 }
 
-size_t line_get_visual_col(const Line *line, size_t char_col) {
+void render_line_text(SDL_Renderer *renderer, Font font, const char *text, size_t text_size, Vec2f pos, SDL_Color color, int font_scale) {
+    if (text_size == 0 || text == NULL) return;
 
-	size_t visual_col = 0;
-	size_t limit = (char_col < line->size) ? char_col : line->size;
+    char *vis_buf = malloc(text_size * 4 + 1);
+    size_t vis_i = 0;
 
-	for (size_t i = 0; i < limit; i++) {
-		if (line->chars[i] == '\t') {
-			visual_col = (visual_col / 4 + 1) * 4;
-		}
+    for (size_t i = 0; i < text_size; i++) {
+        if (text[i] == '\t') {
+            size_t spaces = 4 - (vis_i % 4);
+            for (size_t s = 0; s < spaces; s++) {
+                vis_buf[vis_i++] = ' ';
+            }
+        } else {
+            vis_buf[vis_i++] = text[i];
+        }
+    }
+    vis_buf[vis_i] = '\0';
 
-		else {
-			visual_col += 1;
-		}
-	}
-
-	return visual_col;
+    render_text(renderer, font, vis_buf, pos, color, (float) font_scale);
+    
+    free(vis_buf);
 }
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
@@ -451,7 +471,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 		const Vec2f line_pos = camera_project_point(vars, vec2f(0.0f, (float) row * vars->font.char_h * vars->font_scale));
 
 		if (line->chars != NULL && line->size > 0 ) {
-			render_text(vars->renderer, vars->font, line->chars, line_pos, color, vars->font_scale);
+			render_line_text(vars->renderer, vars->font, line->chars, line->size, line_pos, color, vars->font_scale);
 		}
 	}
 

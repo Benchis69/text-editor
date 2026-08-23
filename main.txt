@@ -1,7 +1,0 @@
-
-	if (editor->cursor_col == editor->lines[editor->cursor_row].size) {
-ifhjwaepoifjepwaofgjae
-PÜOgjkAES
-ÜPGKESD
-ÜPGksE
-ÜPGk

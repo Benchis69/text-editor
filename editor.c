@@ -179,7 +179,7 @@ void editor_insert_text_before_cursor(Editor *editor, const char *text) {
 
 	for (size_t i = 0; text[i] != '\0'; i++) {
 		if (text[i] == '\t') {
-			line_insert_text_before(&editor->lines[editor->cursor_row], "    ", &editor->cursor_col);
+			line_insert_text_before(&editor->lines[editor->cursor_row], "\t", &editor->cursor_col);
 		}
 		else if (text[i] != '\r') {
 			char c_str[2] = {text[i], '\0'};
@@ -263,7 +263,7 @@ void editor_save_to_file(const Editor *editor, const char *file_path) {
 void line_append_filtered(Line *line, const char *text, size_t text_size) {
 	for (size_t i = 0; i < text_size; i++) {
 		if (text[i] == '\t') {
-			line_append_text_sized(line, "    ", 4);
+			line_append_text_sized(line, "\t", 1);
 		}
 		else if (text[i] != '\r') {
 			line_append_text_sized(line, &text[i], 1);
