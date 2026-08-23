@@ -150,6 +150,24 @@ void usage(FILE *stream) {
 	fprintf(stream, "Usage: text editor [FILE-PATH]");
 }
 
+size_t line_get_visual_col(const Line *line, size_t char_col) {
+
+	size_t visual_col = 0;
+	size_t limit = (char_col < line->size) ? char_col : line->size;
+
+	for (size_t i = 0; i < limit; i++) {
+		if (line->chars[i] == '\t') {
+			visual_col = (visual_col / 4 + 1) * 4;
+		}
+
+		else {
+			visual_col += 1;
+		}
+	}
+
+	return visual_col;
+}
+
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
 
 	char *file_path = NULL;
@@ -250,7 +268,11 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 		       	
     			else {
         			vars->editor.cursor_row = (size_t)new_row;
-    			}			    
+    			}
+
+			if (vars->editor.cursor_col > vars->editor.lines[vars->editor.cursor_row].size) {
+        			vars->editor.cursor_col = vars->editor.lines[vars->editor.cursor_row].size;
+    			}			
 		} break;
 
 		case SDL_EVENT_KEY_DOWN: {
@@ -283,9 +305,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 					}
 
 					else {
-						Line *line = &vars->editor.lines[vars->editor.cursor_row];
-        					line_delete(line, &vars->editor.cursor_col - 1);
-        					vars->editor.cursor_col -= 1;
+						editor_backspace(&vars->editor);
 					}
 				} break;
 
@@ -306,7 +326,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 				} break;
 				
 				case SDLK_TAB: {
-					editor_insert_text_before_cursor(&vars->editor, "    ");
+					editor_insert_text_before_cursor(&vars->editor, "\t");
 				} break;
 
 				case SDLK_RETURN: {
@@ -376,13 +396,11 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 	Variables *vars = (Variables *) appstate;
 
 	{
-		int cursor_x = 0;
-		int dummy_h = 0;
 		Line *line = &vars->editor.lines[vars->editor.cursor_row];
 
-		if (line->chars != NULL && vars->editor.cursor_col > 0) {
-			TTF_GetStringSize(vars->font.font, line->chars, vars->editor.cursor_col, &cursor_x, &dummy_h);
-		}
+		size_t visual_col = line_get_visual_col(line, vars->editor.cursor_col);
+		int cursor_x = (int) visual_col * vars->font.char_w;
+		
 
 		const Vec2f cursor_pos = vec2f(
 				(float) cursor_x * vars->font_scale,

@@ -77,9 +77,11 @@ void line_backspace(Line *line, size_t *col) {
 void line_delete(Line *line, size_t *col) {
 	
 	if (*col > line->size) *col = line->size;
+
+	size_t chars_to_move = line->size - *col;
 	
 	if(*col < line->size && line->size > 0) {
-		memmove(line->chars + *col, line->chars + *col + 1, line->size - *col);
+		memmove(line->chars + *col, line->chars + *col + 1, chars_to_move);
 		line->size -= 1;
 
 		line->chars[line->size] = '\0';
@@ -220,7 +222,7 @@ void editor_delete_line(Editor *editor, size_t *row) {
 	}
 
 	editor->size -= 1;
-	editor->cursor_row -= 1;
+	editor->cursor_row -= 1; // kann vielleicht weg
 
 	if (editor->cursor_row >= editor->size) {
         	editor->cursor_row = editor->size > 0 ? editor->size - 1 : 0;
