@@ -18,6 +18,15 @@
 #define FPS 60
 #define DELTA_TIME (1.0f / FPS)
 
+#define HEADER_BAR_FILE_POS_X 25
+#define HEADER_BAR_FILE_POS_Y 13
+
+#define HEADER_BAR_EDIT_POS_X 125
+#define HEADER_BAR_EDIT_POS_Y 13
+
+#define HEADER_BAR_HELP_POS_X 225
+#define HEADER_BAR_HELP_POS_Y 13
+
 typedef struct {
 	TTF_Font *font;
 	int char_w;
@@ -52,22 +61,34 @@ Vec2f camera_project_point(void *appstate, Vec2f point) {
 	return vec2f_add(vec2f_sub(point, vars->camera_pos), vec2fs(100.0f));
 }
 
-size_t line_get_visual_col(const Line *line, size_t char_col) {
+int get_cursor_x(Font font, const Line *line, size_t cursor_col) {
+    
+	if (line->chars == NULL || cursor_col == 0) return 0;
 
-	size_t visual_col = 0;
-	size_t limit = (char_col < line->size) ? char_col : line->size;
+	size_t limit = (cursor_col < line->size) ? cursor_col : line->size;
+    
+	char *vis_buf = malloc(limit * 4 + 1);
+	size_t vis_i = 0;
 
 	for (size_t i = 0; i < limit; i++) {
 		if (line->chars[i] == '\t') {
-			visual_col = (visual_col / 4 + 1) * 4;
+			size_t spaces = 4 - (vis_i % 4);
+			for (size_t s = 0; s < spaces; s++) {
+				vis_buf[vis_i++] = ' ';
+			}
 		}
-
+		
 		else {
-			visual_col += 1;
+			vis_buf[vis_i++] = line->chars[i];
 		}
 	}
+	vis_buf[vis_i] = '\0';
 
-	return visual_col;
+	int w = 0, h = 0;
+	TTF_GetStringSize(font.font, vis_buf, 0, &w, &h);
+	free(vis_buf);
+
+	return w;
 }
 
 void render_text(SDL_Renderer *renderer, Font font, const char *text, Vec2f pos, SDL_Color color, float scale) {
@@ -100,8 +121,7 @@ void render_cursor(void *appstate) {
 	Line *line = &vars->editor.lines[vars->editor.cursor_row];
 
 	// Measure exact distance from text to cursor
-	size_t visual_col = line_get_visual_col(line, vars->editor.cursor_col);
-	int cursor_x = (int) visual_col * vars->font.char_w;
+	int cursor_x = get_cursor_x(vars->font, line, vars->editor.cursor_col);
 
 	const Vec2f pos = camera_project_point(vars, vec2f(
 		(float) cursor_x * vars->font_scale,
@@ -147,11 +167,11 @@ int load_font_from_file(void *appstate, const char *file_path, int size) {
 		return 1;
 	}
 
-	// Get values for char "A", works only for monospace fonts
-	TTF_GetStringSize(vars->font.font, "A", 0,  &w1, &h);
+	// Get values for char ">", works only for monospace fonts
+	TTF_GetStringSize(vars->font.font, ">", 0,  &w1, &h);
 
-	// Get values for "AA" to measure real distance
-	TTF_GetStringSize(vars->font.font, "AA", 0, &w2, &h);
+	// Get values for ">>" to measure real distance
+	TTF_GetStringSize(vars->font.font, ">>", 0, &w2, &h);
 
 	vars->font.char_w = w2 - w1;
 	vars->font.char_h = h;
@@ -415,11 +435,11 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
 	Variables *vars = (Variables *) appstate;
 
+	// Camera positioning 
 	{
 		Line *line = &vars->editor.lines[vars->editor.cursor_row];
 
-		size_t visual_col = line_get_visual_col(line, vars->editor.cursor_col);
-		int cursor_x = (int) visual_col * vars->font.char_w;
+		int cursor_x = get_cursor_x(vars->font, line, vars->editor.cursor_col);
 		
 
 		const Vec2f cursor_pos = vec2f(
@@ -454,8 +474,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 		vars->camera_pos = vec2f_add(vars->camera_pos, vec2f_mul(vars->camera_vel, vec2fs(DELTA_TIME)));
 	}
 
-	SDL_SetRenderDrawColor(vars->renderer, 30, 30, 30, 255);
-
+	SDL_SetRenderDrawColor(vars->renderer, 50, 50, 50, 255);
 	SDL_RenderClear(vars->renderer);
 	
 	SDL_Color color = {
@@ -476,9 +495,22 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 	}
 
 	render_cursor(vars);
+	
+	// Header bar
+	{
+		Vec2f window_sizes = window_size(vars->window);
+		SDL_FRect header_bar = {0,0, window_sizes.x, 50};
+		
+		SDL_SetRenderDrawColor(vars->renderer, 30, 30, 30, 255);
+		SDL_RenderFillRect(vars->renderer, &header_bar);
+
+		render_text(vars->renderer, vars->font, "File", vec2f(HEADER_BAR_FILE_POS_X, HEADER_BAR_FILE_POS_Y), color, vars->font_scale);
+		render_text(vars->renderer, vars->font, "Edit", vec2f(HEADER_BAR_EDIT_POS_X, HEADER_BAR_EDIT_POS_Y), color, vars->font_scale);
+		render_text(vars->renderer, vars->font, "Help", vec2f(HEADER_BAR_HELP_POS_X, HEADER_BAR_HELP_POS_Y), color, vars->font_scale);
+	}
 
 	SDL_RenderPresent(vars->renderer);
-
+	
 	const Uint32 duration = SDL_GetTicks() - start;
 	const Uint32 delta_time_ms = 1000 / FPS;
 
