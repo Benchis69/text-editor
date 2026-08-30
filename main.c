@@ -425,6 +425,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 			
 	}
 
+	SDL_RenderPresent(vars->renderer);
 
 	return SDL_APP_CONTINUE;
 }
@@ -504,9 +505,32 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 		SDL_SetRenderDrawColor(vars->renderer, 30, 30, 30, 255);
 		SDL_RenderFillRect(vars->renderer, &header_bar);
 
-		// Render file, edit, help 
+		// Render file, edit, help and boxes around 
+		int width, height;
+		float mouse_x, mouse_y;
+		SDL_FRect text_box = {0};
+		SDL_SetRenderDrawColor(vars->renderer, 255, 0, 0, 255);
+
+		// Get current mouse position
+		SDL_GetMouseState(&mouse_x, &mouse_y);
+		SDL_Log("Mouse x: %f, mouse y: %f", mouse_x, mouse_y);
+
+		if ((mouse_x >= HEADER_BAR_FILE_POS_X - 10 && mouse_x <= width + 20) && (mouse_y >= HEADER_BAR_FILE_POS_Y && mouse_y <= height)) {
+			TTF_GetStringSize(vars->font.font, "File", strlen("File"), &width, &height);
+			text_box = (SDL_FRect) {.x = HEADER_BAR_FILE_POS_X - 10, .y = HEADER_BAR_FILE_POS_Y, .w = width + 20, .h = height};
+			SDL_RenderFillRect(vars->renderer, &text_box);
+		}
 		render_text(vars->renderer, vars->font, "File", vec2f(HEADER_BAR_FILE_POS_X, HEADER_BAR_FILE_POS_Y), color, vars->font_scale);
+		
+		TTF_GetStringSize(vars->font.font, "Edit", strlen("Edit"), &width, &height);
+		text_box = (SDL_FRect) {.x = HEADER_BAR_EDIT_POS_X - 10, .y = HEADER_BAR_EDIT_POS_Y, .w = width + 20, .h = height};
+		SDL_RenderFillRect(vars->renderer, &text_box);
 		render_text(vars->renderer, vars->font, "Edit", vec2f(HEADER_BAR_EDIT_POS_X, HEADER_BAR_EDIT_POS_Y), color, vars->font_scale);
+		
+		
+		TTF_GetStringSize(vars->font.font, "Help", strlen("Help"), &width, &height);
+		text_box = (SDL_FRect) {.x = HEADER_BAR_HELP_POS_X - 10, .y = HEADER_BAR_HELP_POS_Y, .w = width + 20, .h = height};
+		SDL_RenderFillRect(vars->renderer, &text_box);
 		render_text(vars->renderer, vars->font, "Help", vec2f(HEADER_BAR_HELP_POS_X, HEADER_BAR_HELP_POS_Y), color, vars->font_scale);
 	}
 
