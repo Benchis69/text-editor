@@ -48,9 +48,9 @@ typedef struct {
 
 	bool mouse_pressed_left;
 
-	bool render_file_menue;
-	bool render_edit_menue;
-	bool render_help_menue;
+	bool render_file_menu;
+	bool render_edit_menu;
+	bool render_help_menu;
 } Variables;
 
 Vec2f window_size(SDL_Window *window) {
@@ -289,9 +289,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
 
 	vars->mouse_pressed_left = false;
 
-	vars->render_file_menue = false;
-	vars->render_edit_menue = false;
-	vars->render_help_menue = false;
+	vars->render_file_menu = false;
+	vars->render_edit_menu = false;
+	vars->render_help_menu = false;
 		
 	*appstate = vars;
 	
@@ -323,6 +323,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 	
 	Variables *vars = (Variables *) appstate;
+	vars->mouse_pressed_left = false;
 	
 	switch(event->type) {
 		
@@ -432,11 +433,11 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 					if (vars->editor.cursor_row + 1 < vars->editor.size) {
 						vars->editor.cursor_row += 1;
 
-						if (vars->editor.cursor_col == vars->editor.lines[vars->editor.cursor_row - 1].size) {
+						/*if (vars->editor.cursor_col == vars->editor.lines[vars->editor.cursor_row - 1].size) {
 							vars->editor.cursor_col = vars->editor.lines[vars->editor.cursor_row].size;
-						}
+						}*/
 
-						else if (vars->editor.cursor_col >= vars->editor.lines[vars->editor.cursor_row].size) {
+						if (vars->editor.cursor_col >= vars->editor.lines[vars->editor.cursor_row].size) {
 							vars->editor.cursor_col = vars->editor.lines[vars->editor.cursor_row].size;
 						}
 					}
@@ -470,8 +471,6 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 			
 	}
 
-	SDL_RenderPresent(vars->renderer);
-
 	return SDL_APP_CONTINUE;
 }
 
@@ -486,7 +485,6 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 		Line *line = &vars->editor.lines[vars->editor.cursor_row];
 
 		int cursor_x = get_cursor_x(vars->font, line, vars->editor.cursor_col);
-		
 
 		const Vec2f cursor_pos = vec2f(
 				(float) cursor_x * vars->font_scale,
@@ -496,16 +494,17 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
 		Vec2f target_pos = vars->camera_pos;
 
+		
 		float margin_x = 100.0f; 
 		if (screen_cursor_pos.x > SCREEN_WIDTH - margin_x) {
 			target_pos.x += (screen_cursor_pos.x - (SCREEN_WIDTH - margin_x));
 		}
 
-		else if (screen_cursor_pos.x < margin_x) {
+		else if (screen_cursor_pos.x < margin_x - 50) {
         		target_pos.x -= (margin_x - screen_cursor_pos.x); 
 			if (target_pos.x < 0) target_pos.x = 0;
 		}
-
+		
 		float margin_y = 100.0f;
 		if (screen_cursor_pos.y > SCREEN_HEIGHT - margin_y) {
     		target_pos.y += (screen_cursor_pos.y - (SCREEN_HEIGHT - margin_y));
@@ -518,6 +517,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
 		vars->camera_vel = vec2f_mul(vec2f_sub(target_pos, vars->camera_pos), vec2fs(15.0f));
 		vars->camera_pos = vec2f_add(vars->camera_pos, vec2f_mul(vars->camera_vel, vec2fs(DELTA_TIME)));
+		
 	}
 
 	SDL_SetRenderDrawColor(vars->renderer, 50, 50, 50, 255);
@@ -532,12 +532,20 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
 	for (size_t row = 0; row < vars->editor.size; row++) {	
 		Line *line = &vars->editor.lines[row];
+		char line_number_text[20];
+		int line_number = (int) row + 1;
+		snprintf(line_number_text, sizeof(line_number_text), "%d", line_number);
 
 		const Vec2f line_pos = camera_project_point(vars, vec2f(0.0f, (float) row * vars->font.char_h * vars->font_scale));
+		Vec2f line_number_pos = vec2f(0, line_pos.y);
+
+		if (line_number < 10) line_number_pos.x += 20;
+		else if (line_number < 100) line_number_pos.x += 10;
 
 		if (line->chars != NULL && line->size > 0 ) {
 			render_line_text(vars->renderer, vars->font, line->chars, line->size, line_pos, color, vars->font_scale);
 		}
+		render_text(vars->renderer, vars->font, line_number_text, line_number_pos, color, vars->font_scale);
 	}
 
 	render_cursor(vars);
@@ -561,7 +569,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 			.y = HEADER_BAR_FILE_POS_Y,
 			.w = width_file + 20,
 			.h = height_file + HEADER_BAR_FILE_POS_Y - 10};
-		if (mouse_in_border(text_box_file.x, text_box_file.y, text_box_file.w + HEADER_BAR_FILE_POS_X, text_box_file.h + 10) || vars->render_file_menue) {
+		if (mouse_in_border(text_box_file.x, text_box_file.y, text_box_file.w + HEADER_BAR_FILE_POS_X, text_box_file.h + 10) || vars->render_file_menu) {
 			SDL_RenderFillRect(vars->renderer, &text_box_file);
 		}
 		render_text(vars->renderer, vars->font, "File", vec2f(HEADER_BAR_FILE_POS_X, HEADER_BAR_FILE_POS_Y), color, vars->font_scale);
@@ -572,7 +580,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 			.y = HEADER_BAR_EDIT_POS_Y,
 			.w = width_edit + 20,
 			.h = height_edit + HEADER_BAR_EDIT_POS_Y - 10};
-		if (mouse_in_border(text_box_edit.x, text_box_edit.y, text_box_edit.w + HEADER_BAR_EDIT_POS_X, text_box_edit.h + 10) || vars->render_edit_menue) {
+		if (mouse_in_border(text_box_edit.x, text_box_edit.y, text_box_edit.w + HEADER_BAR_EDIT_POS_X, text_box_edit.h + 10) || vars->render_edit_menu) {
 			SDL_RenderFillRect(vars->renderer, &text_box_edit);
 		}
 		render_text(vars->renderer, vars->font, "Edit", vec2f(HEADER_BAR_EDIT_POS_X, HEADER_BAR_EDIT_POS_Y), color, vars->font_scale);
@@ -584,62 +592,68 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 			.y = HEADER_BAR_HELP_POS_Y,
 			.w = width_help + 20,
 			.h = height_help + HEADER_BAR_HELP_POS_Y - 10};
-		if (mouse_in_border(text_box_help.x, text_box_edit.y, text_box_edit.w + HEADER_BAR_HELP_POS_X, text_box_edit.h + 10) || vars->render_help_menue) {
+		if (mouse_in_border(text_box_help.x, text_box_edit.y, text_box_edit.w + HEADER_BAR_HELP_POS_X, text_box_edit.h + 10) || vars->render_help_menu) {
 			SDL_RenderFillRect(vars->renderer, &text_box_help);
 		}
 		render_text(vars->renderer, vars->font, "Help", vec2f(HEADER_BAR_HELP_POS_X, HEADER_BAR_HELP_POS_Y), color, vars->font_scale);
 		
 		if (mouse_pressed_in_border(vars, text_box_file.x, text_box_file.y, text_box_file.w + HEADER_BAR_FILE_POS_X, text_box_file.h + 10)) {
-			vars->render_file_menue = true;
+			vars->render_file_menu = true;
 		}
 
 		if (mouse_pressed_in_border(vars, text_box_edit.x, text_box_edit.y, text_box_edit.w + HEADER_BAR_EDIT_POS_X, text_box_edit.h + 10)) {
-			vars->render_edit_menue = true;
+			vars->render_edit_menu = true;
 		}
 
 		if (mouse_pressed_in_border(vars, text_box_help.x, text_box_help.y, text_box_help.w + HEADER_BAR_HELP_POS_X, text_box_help.h + 10)) {
-			vars->render_help_menue = true;
+			vars->render_help_menu = true;
 		}
 
-		if (vars->render_file_menue) {
-			SDL_FRect file_menue = {
+		if (vars->render_file_menu) {
+			SDL_FRect file_menu = {
 				.x = HEADER_BAR_FILE_POS_X - 10,
 				.y = HEADER_BAR_FILE_POS_Y + height_file,
 				.w = 4 * (width_file + 20),
 				.h = 6 * (height_file + HEADER_BAR_FILE_POS_Y)};
 
-			SDL_RenderFillRect(vars->renderer, &file_menue);
+			// Render the box
+			SDL_RenderFillRect(vars->renderer, &file_menu);
 
-			if (!mouse_in_border(text_box_file.x, text_box_file.y, text_box_file.w + HEADER_BAR_FILE_POS_X, text_box_file.h + 10) && !mouse_in_border(file_menue.x, file_menue.y, file_menue.w + HEADER_BAR_FILE_POS_X, file_menue.h + 10)) {
-				vars->render_file_menue = false;
+			// Render the text
+			render_text(vars->renderer, vars->font, "Open", vec2f(file_menu.x + 10, file_menu.y + 10), color, vars->font_scale);
+			render_text(vars->renderer, vars->font, "Open", vec2f(file_menu.x + 10, file_menu.y + 10 + 2 * (vars->font.char_h * vars->font_scale - 10)), color, vars->font_scale);
+			render_text(vars->renderer, vars->font, "Open", vec2f(file_menu.x + 10, file_menu.y + 10 + 4 * (vars->font.char_h * vars->font_scale - 10)), color, vars->font_scale);
+
+			if (!mouse_in_border(text_box_file.x, text_box_file.y, text_box_file.w + HEADER_BAR_FILE_POS_X, text_box_file.h + 10) && !mouse_in_border(file_menu.x, file_menu.y, file_menu.w + HEADER_BAR_FILE_POS_X, file_menu.h + 35)) {
+				vars->render_file_menu = false;
 			}
 		}
 
-		if (vars->render_edit_menue) {
-			SDL_FRect edit_menue = {
+		if (vars->render_edit_menu) {
+			SDL_FRect edit_menu = {
 			.x = HEADER_BAR_EDIT_POS_X - 10,
 			.y = HEADER_BAR_EDIT_POS_Y + height_edit,
 			.w = 4 * (width_edit + 20),
 			.h = 6 * (height_edit + HEADER_BAR_EDIT_POS_Y)};
 			
-			SDL_RenderFillRect(vars->renderer, &edit_menue);
+			SDL_RenderFillRect(vars->renderer, &edit_menu);
 			
-			if (!mouse_in_border(text_box_edit.x, text_box_edit.y, text_box_edit.w + HEADER_BAR_EDIT_POS_X, text_box_edit.h + 10) && !mouse_in_border(edit_menue.x, edit_menue.y, edit_menue.w + HEADER_BAR_EDIT_POS_X, edit_menue.h + 10)) {
-				vars->render_edit_menue = false;
+			if (!mouse_in_border(text_box_edit.x, text_box_edit.y, text_box_edit.w + HEADER_BAR_EDIT_POS_X, text_box_edit.h + 10) && !mouse_in_border(edit_menu.x, edit_menu.y, edit_menu.w + HEADER_BAR_EDIT_POS_X, edit_menu.h + 35)) {
+				vars->render_edit_menu = false;
 			}
 		}
 
-		if (vars->render_help_menue) {
-			SDL_FRect help_menue = {
+		if (vars->render_help_menu) {
+			SDL_FRect help_menu = {
 				.x = HEADER_BAR_HELP_POS_X - 10,
 				.y = HEADER_BAR_HELP_POS_Y + height_edit,
 				.w = 4 * (width_help + 20),
 				.h = 6 * (height_help + HEADER_BAR_HELP_POS_Y)};
 
-			SDL_RenderFillRect(vars->renderer, &help_menue);
+			SDL_RenderFillRect(vars->renderer, &help_menu);
 
-			if (!mouse_in_border(text_box_help.x, text_box_help.y, text_box_help.w + HEADER_BAR_HELP_POS_X, text_box_help.h + 10) && !mouse_in_border(help_menue.x, help_menue.y, help_menue.w + HEADER_BAR_HELP_POS_X, help_menue.h + 10)) {
-				vars->render_help_menue = false;
+			if (!mouse_in_border(text_box_help.x, text_box_help.y, text_box_help.w + HEADER_BAR_HELP_POS_X, text_box_help.h + 10) && !mouse_in_border(help_menu.x, help_menu.y, help_menu.w + HEADER_BAR_HELP_POS_X, help_menu.h + 35)) {
+				vars->render_help_menu = false;
 			}
 		}
 	}
@@ -682,6 +696,4 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
 
 	SDL_Quit();
 }
-
-
 
