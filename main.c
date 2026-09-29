@@ -73,7 +73,7 @@ bool mouse_in_border(int x, int y, int w, int h) {
 	float mouse_x, mouse_y;
 	SDL_GetMouseState(&mouse_x, &mouse_y);
 	
-	if ((mouse_x >= x && mouse_x <= w) && (mouse_y >= y && mouse_y <= h)) {
+	if ((mouse_x >= x && mouse_x <= x + w) && (mouse_y >= y && mouse_y <= y + h)) {
 		return true;
 	}
 
@@ -92,6 +92,11 @@ bool mouse_pressed_in_border(void *appstate, int x, int y, int w, int h) {
 	}
 
 	return false;
+}
+
+void get_text_length_pixel(const char* text, size_t text_length, int *width, int *height, TTF_Font *font) {
+	
+	TTF_GetStringSize(font, text, text_length, width, height);
 }
 
 int get_cursor_x(Font font, const Line *line, size_t cursor_col) {
@@ -239,6 +244,30 @@ void render_line_text(SDL_Renderer *renderer, Font font, const char *text, size_
     render_text(renderer, font, vis_buf, pos, color, (float) font_scale);
     
     free(vis_buf);
+}
+
+void SDLCALL open_file_dialog_callback(void *appstate, const char * const *filelist, int filter) {
+	
+	if (!filelist) {
+		SDL_Log("Could not open file dialog: %s", SDL_GetError());
+		return ;
+	}
+
+	if (filelist) {
+		const char *selected_path = *filelist;
+		Variables *vars = (Variables *) appstate;
+
+		FILE *f = fopen(selected_path, "r");
+		if (f) {
+			editor_reload(&vars->editor);
+			editor_load_from_file(&vars->editor, f);
+			fclose(f);
+		}
+
+		else SDL_Log("Could not open file: %s", SDL_GetError());
+	}
+
+	else SDL_Log("File choosing stoped");
 }
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
@@ -558,10 +587,10 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 		SDL_SetRenderDrawColor(vars->renderer, 30, 30, 30, 255);
 		SDL_RenderFillRect(vars->renderer, &header_bar);
 
-		// Render file, edit, help and boxes around 
+		// Render file, edit, help and boxes around and check if mouse is pressed inside
+
 		int width_file, height_file, width_edit, height_edit, width_help, height_help;
 		SDL_SetRenderDrawColor(vars->renderer, 129, 119, 117, 255);
-
 
 		TTF_GetStringSize(vars->font.font, "File", strlen("File"), &width_file, &height_file);
 		SDL_FRect text_box_file = (SDL_FRect) {
@@ -569,22 +598,21 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 			.y = HEADER_BAR_FILE_POS_Y,
 			.w = width_file + 20,
 			.h = height_file + HEADER_BAR_FILE_POS_Y - 10};
-		if (mouse_in_border(text_box_file.x, text_box_file.y, text_box_file.w + HEADER_BAR_FILE_POS_X, text_box_file.h + 10) || vars->render_file_menu) {
+		if (mouse_in_border(text_box_file.x, text_box_file.y, text_box_file.w, text_box_file.h) || vars->render_file_menu) {
 			SDL_RenderFillRect(vars->renderer, &text_box_file);
 		}
 		render_text(vars->renderer, vars->font, "File", vec2f(HEADER_BAR_FILE_POS_X, HEADER_BAR_FILE_POS_Y), color, vars->font_scale);
-		
+	
 		TTF_GetStringSize(vars->font.font, "Edit", strlen("Edit"), &width_edit, &height_edit);
 		SDL_FRect text_box_edit = (SDL_FRect) {
 			.x = HEADER_BAR_EDIT_POS_X - 10,
 			.y = HEADER_BAR_EDIT_POS_Y,
 			.w = width_edit + 20,
 			.h = height_edit + HEADER_BAR_EDIT_POS_Y - 10};
-		if (mouse_in_border(text_box_edit.x, text_box_edit.y, text_box_edit.w + HEADER_BAR_EDIT_POS_X, text_box_edit.h + 10) || vars->render_edit_menu) {
+		if (mouse_in_border(text_box_edit.x, text_box_edit.y, text_box_edit.w, text_box_edit.h) || vars->render_edit_menu) {
 			SDL_RenderFillRect(vars->renderer, &text_box_edit);
 		}
 		render_text(vars->renderer, vars->font, "Edit", vec2f(HEADER_BAR_EDIT_POS_X, HEADER_BAR_EDIT_POS_Y), color, vars->font_scale);
-		
 		
 		TTF_GetStringSize(vars->font.font, "Help", strlen("Help"), &width_help, &height_help);
 		SDL_FRect text_box_help = (SDL_FRect) {
@@ -592,23 +620,25 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 			.y = HEADER_BAR_HELP_POS_Y,
 			.w = width_help + 20,
 			.h = height_help + HEADER_BAR_HELP_POS_Y - 10};
-		if (mouse_in_border(text_box_help.x, text_box_edit.y, text_box_edit.w + HEADER_BAR_HELP_POS_X, text_box_edit.h + 10) || vars->render_help_menu) {
+		if (mouse_in_border(text_box_help.x, text_box_edit.y, text_box_edit.w, text_box_edit.h) || vars->render_help_menu) {
 			SDL_RenderFillRect(vars->renderer, &text_box_help);
 		}
 		render_text(vars->renderer, vars->font, "Help", vec2f(HEADER_BAR_HELP_POS_X, HEADER_BAR_HELP_POS_Y), color, vars->font_scale);
 		
-		if (mouse_pressed_in_border(vars, text_box_file.x, text_box_file.y, text_box_file.w + HEADER_BAR_FILE_POS_X, text_box_file.h + 10)) {
+		// Check if mouse is pressed in either box (file, edit, help)
+		if (mouse_pressed_in_border(vars, text_box_file.x, text_box_file.y, text_box_file.w, text_box_file.h)) {
 			vars->render_file_menu = true;
 		}
 
-		if (mouse_pressed_in_border(vars, text_box_edit.x, text_box_edit.y, text_box_edit.w + HEADER_BAR_EDIT_POS_X, text_box_edit.h + 10)) {
+		if (mouse_pressed_in_border(vars, text_box_edit.x, text_box_edit.y, text_box_edit.w, text_box_edit.h)) {
 			vars->render_edit_menu = true;
 		}
 
-		if (mouse_pressed_in_border(vars, text_box_help.x, text_box_help.y, text_box_help.w + HEADER_BAR_HELP_POS_X, text_box_help.h + 10)) {
+		if (mouse_pressed_in_border(vars, text_box_help.x, text_box_help.y, text_box_help.w, text_box_help.h)) {
 			vars->render_help_menu = true;
 		}
-
+	
+		// Rendering file menu
 		if (vars->render_file_menu) {
 			SDL_FRect file_menu = {
 				.x = HEADER_BAR_FILE_POS_X - 10,
@@ -619,12 +649,42 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 			// Render the box
 			SDL_RenderFillRect(vars->renderer, &file_menu);
 
-			// Render the text
-			render_text(vars->renderer, vars->font, "Open", vec2f(file_menu.x + 10, file_menu.y + 10), color, vars->font_scale);
-			render_text(vars->renderer, vars->font, "Open", vec2f(file_menu.x + 10, file_menu.y + 10 + 2 * (vars->font.char_h * vars->font_scale - 10)), color, vars->font_scale);
-			render_text(vars->renderer, vars->font, "Open", vec2f(file_menu.x + 10, file_menu.y + 10 + 4 * (vars->font.char_h * vars->font_scale - 10)), color, vars->font_scale);
+			// Set text positions
+			Vec2f open_pos = vec2f(file_menu.x + 10, file_menu.y + 10);
+			Vec2f new_pos = vec2f(file_menu.x + 10, file_menu.y + 10 + 2 * (vars->font.char_h - 10));
+			Vec2f save_pos = vec2f(file_menu.x + 10, file_menu.y + 10 + 4 * (vars->font.char_h - 10));
+			render_text(vars->renderer, vars->font, "New", new_pos, color, vars->font_scale);
+			render_text(vars->renderer, vars->font, "Save", save_pos, color, vars->font_scale);
 
-			if (!mouse_in_border(text_box_file.x, text_box_file.y, text_box_file.w + HEADER_BAR_FILE_POS_X, text_box_file.h + 10) && !mouse_in_border(file_menu.x, file_menu.y, file_menu.w + HEADER_BAR_FILE_POS_X, file_menu.h + 35)) {
+			// Check if mouse is pressed in box around open button
+			// 1. Define box around open button
+			int width_open, height_open;
+			TTF_GetStringSize(vars->font.font, "Open", strlen("Open"), &width_open, &height_open);
+			SDL_FRect file_open_button = {
+				.x = open_pos.x - 5,
+				.y = open_pos.y,
+				.w = 4 * width_open,
+				.h = height_open};
+
+			if(mouse_in_border(file_open_button.x, file_open_button.y, file_open_button.w, file_open_button.h)) {
+				// 2. Render box around open button
+				SDL_SetRenderDrawColor(vars->renderer, 95, 125, 169, 255);
+				SDL_RenderFillRect(vars->renderer, &file_open_button);
+				if(mouse_pressed_in_border(vars, file_open_button.x, file_open_button.y, file_open_button.w, file_open_button.h)) {
+					// TODO open real file menu
+					SDL_ShowOpenFileDialog(
+						open_file_dialog_callback,
+						vars,
+						vars->window,
+						0,
+						0,
+						NULL,
+						false);
+				}
+			}
+			render_text(vars->renderer, vars->font, "Open", open_pos, color, vars->font_scale);
+
+			if (!mouse_in_border(text_box_file.x, text_box_file.y, text_box_file.w, text_box_file.h) && !mouse_in_border(file_menu.x, file_menu.y, file_menu.w, file_menu.h)) {
 				vars->render_file_menu = false;
 			}
 		}
@@ -638,7 +698,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 			
 			SDL_RenderFillRect(vars->renderer, &edit_menu);
 			
-			if (!mouse_in_border(text_box_edit.x, text_box_edit.y, text_box_edit.w + HEADER_BAR_EDIT_POS_X, text_box_edit.h + 10) && !mouse_in_border(edit_menu.x, edit_menu.y, edit_menu.w + HEADER_BAR_EDIT_POS_X, edit_menu.h + 35)) {
+			if (!mouse_in_border(text_box_edit.x, text_box_edit.y, text_box_edit.w, text_box_edit.h) && !mouse_in_border(edit_menu.x, edit_menu.y, edit_menu.w, edit_menu.h)) {
 				vars->render_edit_menu = false;
 			}
 		}
@@ -652,7 +712,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
 			SDL_RenderFillRect(vars->renderer, &help_menu);
 
-			if (!mouse_in_border(text_box_help.x, text_box_help.y, text_box_help.w + HEADER_BAR_HELP_POS_X, text_box_help.h + 10) && !mouse_in_border(help_menu.x, help_menu.y, help_menu.w + HEADER_BAR_HELP_POS_X, help_menu.h + 35)) {
+			if (!mouse_in_border(text_box_help.x, text_box_help.y, text_box_help.w, text_box_help.h) && !mouse_in_border(help_menu.x, help_menu.y, help_menu.w, help_menu.h)) {
 				vars->render_help_menu = false;
 			}
 		}

@@ -120,6 +120,10 @@ void editor_init(Editor *editor) {
 	editor->cursor_col = 0;
 }
 
+void editor_reload(Editor *editor) {
+	editor_init(editor);
+}
+
 void editor_insert_new_line(Editor *editor) {
 	
 	if (editor->cursor_row > editor->size) editor->cursor_row = editor->size;
