@@ -33,6 +33,7 @@ void editor_load_from_file(Editor *editor, FILE *file);
 void editor_insert_text_before_cursor(Editor *editor, const char *text);
 void editor_insert_new_line(Editor *editor);
 void editor_backspace(Editor *editor);
+void editor_backspace_uft8(Editor *editor);
 void editor_delete(Editor *editor);
 void editor_delete_line(Editor *editor, size_t *row);
 const char *editor_char_under_cursor(const Editor *editor);

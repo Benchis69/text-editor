@@ -202,6 +202,20 @@ void editor_backspace(Editor *editor) {
 	line_backspace(&editor->lines[editor->cursor_row], &editor->cursor_col);
 }
 
+void editor_backspace_uft8(Editor *editor) {
+	
+	if (editor->cursor_col == 0) return;
+
+	Line *line = &editor->lines[editor->cursor_row];
+
+	editor_backspace(editor);
+
+	// if we delete a 'äöü' character 
+	while (editor->cursor_col > 0 && (line->chars[editor->cursor_col - 1] & 0xC0) == 0x80) {
+		editor_backspace(editor);
+	}
+}
+
 void editor_delete(Editor *editor) {
 
 	if (editor->size == 0) return;	

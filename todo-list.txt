@@ -3,7 +3,9 @@ TODO LIST
 1. Neue Datei erstellen wenn programm alleine gestartet wird
 2. nur wenn datei gespeichert ist beenden erlauben (is_file_saved: boolean maybe)
 3. falls nicht: mitte des fensters kleines fenster mit speichern button (nach name fragen etc.)
-4. File menu beenden (Datein öffnen und gegebenenfalls mehr
-5. bei Up arrow key nicht ans ende der höheren Zeile gehen
+4. File menu beenden (Datein öffnen und gegebenenfalls mehr										CHECK
+5. bei Up arrow key nicht ans ende der höheren Zeile gehen											CHECK
 6. äöü löschen fixen (nicht mehr dieses unbekannte zeichen haben)
+
+
 

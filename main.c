@@ -420,7 +420,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 					}
 
 					else {
-						editor_backspace(&vars->editor);
+						editor_backspace_uft8(&vars->editor);
 					}
 				} break;
 
@@ -452,9 +452,10 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 					if (vars->editor.cursor_row > 0) {
 						vars->editor.cursor_row -= 1;
 
-						if (vars->editor.cursor_col >= vars->editor.lines[vars->editor.cursor_row + 1].size) {
+						/*if (vars->editor.cursor_col >= vars->editor.lines[vars->editor.cursor_row + 1].size) {
 							vars->editor.cursor_col = vars->editor.lines[vars->editor.cursor_row].size;
-						}
+						}*/
+						
 					}
 				} break;
 
