@@ -68,6 +68,42 @@ Vec2f camera_project_point(void *appstate, Vec2f point) {
 	return vec2f_add(vec2f_sub(point, vars->camera_pos), vec2fs(100.0f));
 }
 
+void draw_circle(void *appstate, int radius, int cx, int cy) {
+	
+	Variables *vars = (Variables *) appstate;
+
+	for (int dy = 0; dy <= radius; dy++) {
+		int dx = (int) sqrt((double) radius * radius - dy * dy);
+
+		SDL_RenderLine(vars->renderer, cx - dx, cy - dy, cx + dx, cy - dy);
+		SDL_RenderLine(vars->renderer, cx - dx, cy + dy, cx + dx, cy + dy);
+	}
+
+}
+
+void draw_rounded_rectangle(void *appstate, float x, float y, float w, float h, float radius) {
+	
+	Variables *vars = (Variables *) appstate;
+	
+	// Drawing four corner circles
+	draw_circle(vars, radius, x, y); // left
+	draw_circle(vars, radius, x + w, y); // right
+	draw_circle(vars, radius, x, y + h); // left down
+	draw_circle(vars, radius, x + w, y + h); // right down
+
+	// Drawing 3 rectangles to connect all circles
+	SDL_FRect rect1 = {x, y - radius, w, radius};
+	SDL_RenderFillRect(vars->renderer, &rect1);
+
+	SDL_FRect rect2 = {x - radius, y, w +  2 * radius, distance(vec2f(x, y), vec2f(x, y + h))};
+	SDL_RenderFillRect(vars->renderer, &rect2);
+
+	SDL_FRect rect3 = {x, y + h, w, radius};
+	SDL_RenderFillRect(vars->renderer, &rect3);
+
+	
+}
+
 bool mouse_in_border(int x, int y, int w, int h) {
 
 	float mouse_x, mouse_y;
@@ -594,13 +630,8 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 		SDL_SetRenderDrawColor(vars->renderer, 129, 119, 117, 255);
 
 		TTF_GetStringSize(vars->font.font, "File", strlen("File"), &width_file, &height_file);
-		SDL_FRect text_box_file = (SDL_FRect) {
-			.x = HEADER_BAR_FILE_POS_X - 10,
-			.y = HEADER_BAR_FILE_POS_Y,
-			.w = width_file + 20,
-			.h = height_file + HEADER_BAR_FILE_POS_Y - 10};
-		if (mouse_in_border(text_box_file.x, text_box_file.y, text_box_file.w, text_box_file.h) || vars->render_file_menu) {
-			SDL_RenderFillRect(vars->renderer, &text_box_file);
+		if (mouse_in_border(HEADER_BAR_FILE_POS_X - 10, HEADER_BAR_FILE_POS_Y + 5, width_file + 20, height_file - 10) || vars->render_file_menu) {
+			draw_rounded_rectangle(vars, HEADER_BAR_FILE_POS_X, HEADER_BAR_FILE_POS_Y + 5, width_file, height_file - 10, 10);
 		}
 		render_text(vars->renderer, vars->font, "File", vec2f(HEADER_BAR_FILE_POS_X, HEADER_BAR_FILE_POS_Y), color, vars->font_scale);
 	
@@ -611,7 +642,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 			.w = width_edit + 20,
 			.h = height_edit + HEADER_BAR_EDIT_POS_Y - 10};
 		if (mouse_in_border(text_box_edit.x, text_box_edit.y, text_box_edit.w, text_box_edit.h) || vars->render_edit_menu) {
-			SDL_RenderFillRect(vars->renderer, &text_box_edit);
+			draw_rounded_rectangle(vars, HEADER_BAR_EDIT_POS_X, HEADER_BAR_EDIT_POS_Y + 5, width_edit, height_edit - 10, 10);
 		}
 		render_text(vars->renderer, vars->font, "Edit", vec2f(HEADER_BAR_EDIT_POS_X, HEADER_BAR_EDIT_POS_Y), color, vars->font_scale);
 		
@@ -627,7 +658,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 		render_text(vars->renderer, vars->font, "Help", vec2f(HEADER_BAR_HELP_POS_X, HEADER_BAR_HELP_POS_Y), color, vars->font_scale);
 		
 		// Check if mouse is pressed in either box (file, edit, help)
-		if (mouse_pressed_in_border(vars, text_box_file.x, text_box_file.y, text_box_file.w, text_box_file.h)) {
+		if (mouse_pressed_in_border(vars, HEADER_BAR_FILE_POS_X - 10, HEADER_BAR_FILE_POS_Y + 5, width_file + 20, height_file - 10)) {
 			vars->render_file_menu = true;
 		}
 
@@ -648,7 +679,8 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 				.h = 6 * (height_file + HEADER_BAR_FILE_POS_Y)};
 
 			// Render the box
-			SDL_RenderFillRect(vars->renderer, &file_menu);
+			//SDL_SetRenderDrawColor(vars->renderer, 129, 119, 117, 255);
+			draw_rounded_rectangle(vars, HEADER_BAR_FILE_POS_X, HEADER_BAR_FILE_POS_Y + height_file + 10, 4 * (width_file + 20), 6 * (height_file + HEADER_BAR_FILE_POS_Y), 10);
 
 			// Set text positions
 			Vec2f open_pos = vec2f(file_menu.x + 10, file_menu.y + 10);
@@ -670,9 +702,8 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 			if(mouse_in_border(file_open_button.x, file_open_button.y, file_open_button.w, file_open_button.h)) {
 				// 2. Render box around open button
 				SDL_SetRenderDrawColor(vars->renderer, 95, 125, 169, 255);
-				SDL_RenderFillRect(vars->renderer, &file_open_button);
-				if(mouse_pressed_in_border(vars, file_open_button.x, file_open_button.y, file_open_button.w, file_open_button.h)) {
-					// TODO open real file menu
+				draw_rounded_rectangle(vars, open_pos.x, open_pos.y + 3, 4 * width_open, height_open - 5, 6);
+				if(mouse_pressed_in_border(vars, open_pos.x, open_pos.y + 3, 4 * width_open, height_open - 5)) {
 					SDL_ShowOpenFileDialog(
 						open_file_dialog_callback,
 						vars,
@@ -680,12 +711,13 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 						0,
 						0,
 						NULL,
-						false);
+						false
+					);
 				}
 			}
 			render_text(vars->renderer, vars->font, "Open", open_pos, color, vars->font_scale);
 
-			if (!mouse_in_border(text_box_file.x, text_box_file.y, text_box_file.w, text_box_file.h) && !mouse_in_border(file_menu.x, file_menu.y, file_menu.w, file_menu.h)) {
+			if (!mouse_in_border(HEADER_BAR_FILE_POS_X, HEADER_BAR_FILE_POS_Y + 5, width_file, height_file + HEADER_BAR_FILE_POS_Y - 10) && !mouse_in_border(file_menu.x, file_menu.y, file_menu.w, file_menu.h)) {
 				vars->render_file_menu = false;
 			}
 		}
@@ -757,4 +789,5 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
 
 	SDL_Quit();
 }
+
 

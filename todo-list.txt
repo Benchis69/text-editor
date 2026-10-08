@@ -6,6 +6,11 @@ TODO LIST
 4. File menu beenden (Datein öffnen und gegebenenfalls mehr										CHECK
 5. bei Up arrow key nicht ans ende der höheren Zeile gehen											CHECK
 6. äöü löschen fixen (nicht mehr dieses unbekannte zeichen haben)
+7. Wenn zeile größer als fenster und camera sich bewegt, nicht Zeilennummern drüber rendern
+8. Abgerundete Rechtecke benutzen																CHECK
+9. Mit strg arrow keys durch Wörter skippen 
+10. Markieren können
+
 
 
 
