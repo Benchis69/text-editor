@@ -18,6 +18,8 @@
 #define FPS 60
 #define DELTA_TIME (1.0f / FPS)
 
+#define ROUNDED 1
+
 #define HEADER_BAR_FILE_POS_X 25
 
 #define HEADER_BAR_FILE_POS_Y 13
@@ -28,11 +30,21 @@
 #define HEADER_BAR_HELP_POS_X 225
 #define HEADER_BAR_HELP_POS_Y 13
 
+SDL_Color white = {255, 255, 255, 255};
+
 typedef struct {
 	TTF_Font *font;
 	int char_w;
 	int char_h;
 } Font;
+
+typedef struct {
+	SDL_FRect size;
+	const char *text;
+	Vec2f text_size;
+	int radius;
+	SDL_Color color;
+} Button;
 
 typedef struct {
 	SDL_Window *window;
@@ -51,6 +63,9 @@ typedef struct {
 	bool render_file_menu;
 	bool render_edit_menu;
 	bool render_help_menu;
+
+	bool is_file_saved;
+	bool render_save_menu;
 } Variables;
 
 Vec2f window_size(SDL_Window *window) {
@@ -186,6 +201,29 @@ void render_text(SDL_Renderer *renderer, Font font, const char *text, Vec2f pos,
 	// Clean up surface and texture
 	SDL_DestroySurface(surface);
 	SDL_DestroyTexture(texture);
+}
+
+Button button_init(SDL_FRect size, const char *text, int radius, SDL_Color color) {
+	// TODO 
+	TTF_GetStringSize(vars->font.font, button.text, strlen(button.text), &text_width, &text_height);
+	Button button = 
+}
+
+void render_button(void *appstate, const Button button, int flag) {
+	
+	Variables *vars = (Variables *) appstate;
+
+	SDL_SetRenderDrawColor(vars->renderer, button.color.r, button.color.g, button.color.b, button.color.a);
+
+	if (flag == ROUNDED) {
+		draw_rounded_rectangle(vars, button.size.x, button.size.y, button.size.w, button.size.h, button.radius);
+	} 
+	else SDL_RenderFillRect(vars->renderer, &button.size);
+
+	// Draw text centered
+	Vec2f text_pos = vec2f(button.size.x + (button.size.w - button.text_size.x) / 3, button.size.y + (button.size.h - button.text_size.y) / 2);
+	render_text(vars->renderer, vars->font, button.text, text_pos, white, 1.0f);
+
 }
 
 void render_cursor(void *appstate) {
@@ -357,6 +395,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char** argv) {
 	vars->render_file_menu = false;
 	vars->render_edit_menu = false;
 	vars->render_help_menu = false;
+
+	vars->is_file_saved = false;
+	vars->render_save_menu = false;
 		
 	*appstate = vars;
 	
@@ -393,7 +434,8 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 	switch(event->type) {
 		
 		case SDL_EVENT_QUIT: {
-			return SDL_APP_SUCCESS;		     
+			if (vars->is_file_saved) return SDL_APP_SUCCESS;
+			else vars->render_save_menu = true; 
 		} break;
 
 		case SDL_EVENT_MOUSE_WHEEL: {
@@ -430,7 +472,8 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 			switch (event->key.key) {
 				
 				case SDLK_ESCAPE: {
-					return SDL_APP_SUCCESS;
+					if (vars->is_file_saved) return SDL_APP_SUCCESS;
+					else vars->render_save_menu = true;
 				} break;
 
 				case SDLK_BACKSPACE: {
@@ -469,6 +512,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 				case SDLK_F2: {
 					if (vars->file_path) {
 						editor_save_to_file(&vars->editor, vars->file_path);
+						vars->is_file_saved = true;
 					}
 				} break;
 
@@ -747,6 +791,23 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
 			if (!mouse_in_border(text_box_help.x, text_box_help.y, text_box_help.w, text_box_help.h) && !mouse_in_border(help_menu.x, help_menu.y, help_menu.w, help_menu.h)) {
 				vars->render_help_menu = false;
+			}
+		}
+	}
+
+	// Save menu
+	{
+		if (vars->render_save_menu) {
+			
+			Vec2f w = window_size(vars->window);
+			SDL_FRect border = {(w.x / 2) - 200, (w.y / 3) - 25, 400, 100};
+			SDL_Color save_color = {129, 119, 117, 255};
+			Button save_button =  {border, "Save", 5, save_color};
+			render_button(vars, save_button, ROUNDED);
+			
+			if (mouse_in_border(border.x, border.y, border.w, border.h)) { 
+				SDL_SetRenderDrawColor(vars->renderer, 95, 125, 169, 255);
+				draw_rounded_rectangle(vars, border.x, border.y, border.w, border.h, 5);
 			}
 		}
 	}
