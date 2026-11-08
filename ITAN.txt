@@ -1,0 +1,28 @@
+Was ist das?
+	- Eine Liste von 20 6-stelligen Nummern die du zum authentifizieren brauchst
+	- Jede Nummer ist nur einmal gültig, heißt sie verfällt nach Benutzung
+
+Wozu brauchst du das (wann musst du dich authentifizieren) ?
+	- Klausuranmeldugen
+	- Lehrveranstaltungen belegen
+	- Neue Liste erstellen, wenn die alte nur noch ZWEI TANS hat
+	(Du MUSST (oder solltest hihi ist nicht ganz so wichtig) immer 2 TANS übrig lassen um neue Liste zu machen)
+
+Wie erstellst du eine neue Liste?
+	- Was du brauchst: ZWEI unverbrauchte TANS
+
+	- Schritt 1: In PULS zu Meine Funktionen -> ITAN Listen-Generierung gehen
+		- jetzt brauchst du eine der 2 TANS die du aufheben solltest (welche genau steht da weil die TANS durchnummeriert sind)
+		- Klick auf Liste erzeugen
+
+	- Schritt 2:
+		- Klick auf Erzeugte (noch nicht aktive) ITAN-Liste herunterladen
+		- Datei speichern (die sagen man soll aus Sicherheitsgründen die direkt ausdrucken, aber weiß nich ob das so deep ist)
+
+	- Schritt 3:
+		- Klick auf Neue ITAN-Liste aktivieren 
+		- Jetzte brauchst du wieder zwei TANS einmal die verbleibende von der alten Liste und eine von der neuen (du startest quasi nicht mit 20 TANS sondern 19)
+		- Klick auf Liste freischalten
+
+Niiiiiiiiiiiiiiiih
+		

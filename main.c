@@ -123,6 +123,7 @@ bool mouse_in_border(int x, int y, int w, int h) {
 
 	float mouse_x, mouse_y;
 	SDL_GetMouseState(&mouse_x, &mouse_y);
+	//printf("mouse x = %f, mouse y = %f\n", mouse_x, mouse_y);
 	
 	if ((mouse_x >= x && mouse_x <= x + w) && (mouse_y >= y && mouse_y <= y + h)) {
 		return true;
@@ -203,10 +204,20 @@ void render_text(SDL_Renderer *renderer, Font font, const char *text, Vec2f pos,
 	SDL_DestroyTexture(texture);
 }
 
-Button button_init(SDL_FRect size, const char *text, int radius, SDL_Color color) {
-	// TODO 
-	TTF_GetStringSize(vars->font.font, button.text, strlen(button.text), &text_width, &text_height);
-	Button button = 
+Button button_init(void *appstate, Vec2f pos, const char *text, int radius, SDL_Color color) {
+	
+	Variables *vars = (Variables *) appstate;
+
+	int w, h;
+	TTF_GetStringSize(vars->font.font, text, strlen(text), &w, &h);
+	pos.x -= w;
+	pos.y -= h;
+	SDL_FRect size = {pos.x, pos.y, w + 20, h + 15};
+	
+	Button button = {size, text, vec2f(w, h), radius, color};
+
+	return button;
+	 
 }
 
 void render_button(void *appstate, const Button button, int flag) {
@@ -472,8 +483,9 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 			switch (event->key.key) {
 				
 				case SDLK_ESCAPE: {
-					if (vars->is_file_saved) return SDL_APP_SUCCESS;
-					else vars->render_save_menu = true;
+					//if (vars->is_file_saved) return SDL_APP_SUCCESS;
+					//else vars->render_save_menu = true;
+					return SDL_APP_SUCCESS;
 				} break;
 
 				case SDLK_BACKSPACE: {
@@ -802,13 +814,18 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 			Vec2f w = window_size(vars->window);
 			SDL_FRect border = {(w.x / 2) - 200, (w.y / 3) - 25, 400, 100};
 			SDL_Color save_color = {129, 119, 117, 255};
-			Button save_button =  {border, "Save", 5, save_color};
-			render_button(vars, save_button, ROUNDED);
-			
-			if (mouse_in_border(border.x, border.y, border.w, border.h)) { 
+			Vec2f save_button_pos = vec2f(border.x + border.w / 2, border.y + border.h / 2);
+
+			draw_rounded_rectangle(vars, border.x, border.y, border.w, border.h, 5);
+			Button save_button =  button_init(vars, save_button_pos, "Save",  5, save_color);
+		
+			//printf("save_button: x = %f, y = %f, w = %f, h = %f\n", save_button.size.x, save_button.size.y, save_button.size.w, save_button.size.h);
+
+			if (mouse_in_border(save_button.size.x, save_button.size.y, save_button.size.w, save_button.size.h)) { 
 				SDL_SetRenderDrawColor(vars->renderer, 95, 125, 169, 255);
-				draw_rounded_rectangle(vars, border.x, border.y, border.w, border.h, 5);
+				draw_rounded_rectangle(vars, save_button.size.x, save_button.size.y, save_button.size.w, save_button.size.h, 5);
 			}
+			render_button(vars, save_button, ROUNDED);
 		}
 	}
 

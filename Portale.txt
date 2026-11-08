@@ -1,0 +1,41 @@
+Alle Portale von der ganzen Uni niiiih
+
+UP = Uni Potsdam
+
+1. PULS
+	- Belegung Kurse
+	- Prüfungsanmeldung 
+	- Anträge
+
+2. Moodle.UP
+	- Da hast du deine Folien und shit
+
+3. Open.UP
+	- ist irgendwie moodle aber auch für externe Leute
+
+4. Exam.UP 
+	- das ist seperates moodle für E-Prüfungen
+	- I guess einfach online prüfung da
+
+5. PEP (Potsdamer Evluationsportal)
+	- I guess du bewertest da Lerhveranstaltungen und shit
+
+6. Praxis Protal
+	- Unterstützt dich bei Berufsorientierung
+
+7. Alumni-Portal
+	- Plattform um mit alten homies zu schreiben wenn man nicht mehr studiert
+
+8. SPP (Service Portal für Personal) juckt dich nich
+
+9. Account.UP
+	- Alles rund um deinen Account (Passwort ändern, angezeigten Namen ändern)
+
+10. BI.UP (Business Intelligence System)
+	- Portal um Berichte über Daten und Statistiken der Uni Potsdam abzufragen
+
+11. Mail.UP
+	- Web mail box (emails im web aangucken (bekommen wir safe noch auf outlook))
+
+12. Box.UP
+	- Dein eigener Cloud Speicher
